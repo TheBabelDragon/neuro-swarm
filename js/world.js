@@ -1,9 +1,13 @@
 const World = (() => {
   const SWARM = 56;
-  const GEN_TIME = 24;
+  const GEN_TIME = 26;
   const HIT_R = 16;
   const PLAYER_R = 9;
   const AI_R = 6;
+  const BOLT_SPEED = 640;
+  const BOLT_LIFE = 0.42;
+  const PLAYER_COOL = 0.16;
+  const AI_COOL = 0.55;
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
@@ -24,6 +28,7 @@ const World = (() => {
       fitness: 0,
       alive: true,
       heat: 0,
+      cool: Math.random() * 0.4,
       trail: [],
     };
   }
@@ -38,9 +43,12 @@ const World = (() => {
       genT: 0,
       best: 0,
       hits: 0,
+      kills: 0,
       threat: 0,
       shake: 0,
       sparks: [],
+      bolts: [],
+      booms: [],
       player: {
         x: w * 0.5,
         y: h * 0.5,
@@ -48,11 +56,14 @@ const World = (() => {
         vx: 0,
         vy: 0,
         vz: 0,
-        heading: 0,
+        heading: -Math.PI / 2,
         bank: 0,
         rot: 0,
         boost: 0,
         flash: 0,
+        hp: 1,
+        cool: 0,
+        dead: false,
         trail: [],
       },
       agents,
@@ -74,12 +85,16 @@ const World = (() => {
     state.generation += 1;
     state.genT = 0;
     state.agents = genomes.map((g) => makeAgent(g, w, h));
+    state.bolts = [];
     state.player.x = w * 0.5;
     state.player.y = h * 0.5;
     state.player.vx = 0;
     state.player.vy = 0;
+    state.player.hp = 1;
+    state.player.dead = false;
     state.player.flash = 0.45;
     state.player.trail = [];
+    state.player.cool = 0;
   }
 
   function sense(state, a) {
@@ -120,21 +135,70 @@ const World = (() => {
     if (ent.trail.length > max * 3) ent.trail.splice(0, 3);
   }
 
-  function spark(state, x, y, z, n) {
+  function spark(state, x, y, z, n, speed) {
+    const spd = speed || 140;
     for (let i = 0; i < n; i++) {
       const a = Math.random() * Math.PI * 2;
-      const s = 40 + Math.random() * 120;
+      const s = spd * (0.3 + Math.random());
       state.sparks.push({
         x, y, z,
         vx: Math.cos(a) * s,
         vy: Math.sin(a) * s,
-        life: 0.25 + Math.random() * 0.35,
+        life: 0.22 + Math.random() * 0.4,
       });
     }
   }
 
+  function boom(state, x, y, z, power, friendly) {
+    state.booms.push({
+      x, y, z,
+      t: 0,
+      life: 0.38 + power * 0.12,
+      power,
+      friendly: !!friendly,
+    });
+    spark(state, x, y, z, 14 + (power * 10) | 0, 80 + power * 90);
+    state.shake = Math.max(state.shake, 0.45 + power * 0.4);
+    SFX.boom();
+    if (navigator.vibrate) navigator.vibrate(power > 1.2 ? [18, 30, 40] : 16);
+  }
+
+  function fire(state, ent, friendly) {
+    const hx = Math.cos(ent.heading);
+    const hy = Math.sin(ent.heading);
+    state.bolts.push({
+      x: ent.x + hx * 14,
+      y: ent.y + hy * 14,
+      z: ent.z,
+      vx: hx * BOLT_SPEED + ent.vx * 0.25,
+      vy: hy * BOLT_SPEED + ent.vy * 0.25,
+      heading: ent.heading,
+      life: BOLT_LIFE,
+      friendly,
+    });
+    SFX.zap(friendly);
+  }
+
+  function killAgent(state, a) {
+    if (!a.alive) return;
+    a.alive = false;
+    a.fitness -= 4;
+    state.kills += 1;
+    boom(state, a.x, a.y, a.z, 1, true);
+  }
+
+  function destroyPlayer(state) {
+    const p = state.player;
+    if (p.dead) return;
+    p.dead = true;
+    p.hp = 0;
+    boom(state, p.x, p.y, p.z, 1.8, false);
+    p.flash = 1;
+  }
+
   function stepPlayer(state, input, dt) {
     const p = state.player;
+    if (p.dead) return;
     const accel = input.boost ? 520 : 280;
     const max = input.boost ? 280 : 168;
     p.vx += input.x * accel * dt;
@@ -154,6 +218,11 @@ const World = (() => {
     p.rot += (8 + s / 18 + (input.boost ? 10 : 0)) * dt;
     p.boost += ((input.boost ? 1 : 0) - p.boost) * 8 * dt;
     p.flash = Math.max(0, p.flash - dt);
+    p.cool = Math.max(0, p.cool - dt);
+    if (input.fire && p.cool <= 0) {
+      fire(state, p, true);
+      p.cool = PLAYER_COOL;
+    }
     confine(p, state.w, state.h, 36);
     pushTrail(p, 16);
   }
@@ -188,6 +257,7 @@ const World = (() => {
       if (spd > 10) a.heading = Math.atan2(a.vy, a.vx);
       a.bank += (clamp(a.vx / 200, -1, 1) - a.bank) * 5 * dt;
       a.rot += (7 + spd / 16) * dt;
+      a.cool = Math.max(0, a.cool - dt);
 
       a.x += a.vx * dt;
       a.y += a.vy * dt;
@@ -206,14 +276,22 @@ const World = (() => {
       if (pd < 80) a.fitness += dt * 0.85;
       a.heat += ((pd < 140 ? 1 - pd / 140 : 0) - a.heat) * 4 * dt;
 
-      if (pd < HIT_R + a.z * 0.04) {
-        a.fitness += 9;
+      const aimDot = (pdx * Math.cos(a.heading) + pdy * Math.sin(a.heading)) / (pd || 1);
+      if (!state.player.dead && a.cool <= 0 && out[2] > 0.35 && pd < 320 && aimDot > 0.35) {
+        fire(state, a, false);
+        a.cool = AI_COOL + Math.random() * 0.2;
+        a.fitness += 0.4;
+      }
+
+      if (!state.player.dead && pd < HIT_R + a.z * 0.04) {
+        a.fitness += 8;
         state.player.flash = 1;
-        state.shake = 1;
+        state.player.hp -= 0.18;
         hitsThis++;
-        spark(state, a.x, a.y, a.z, 10);
+        spark(state, a.x, a.y, a.z, 8, 110);
         a.vx -= pdx * 8;
         a.vy -= pdy * 8;
+        if (state.player.hp <= 0) destroyPlayer(state);
       }
     }
 
@@ -226,7 +304,45 @@ const World = (() => {
     return alive;
   }
 
-  function stepSparks(state, dt) {
+  function stepBolts(state, dt) {
+    for (let i = state.bolts.length - 1; i >= 0; i--) {
+      const b = state.bolts[i];
+      b.x += b.vx * dt;
+      b.y += b.vy * dt;
+      b.life -= dt;
+      if (b.life <= 0 || b.x < 0 || b.y < 0 || b.x > state.w || b.y > state.h) {
+        state.bolts.splice(i, 1);
+        continue;
+      }
+      let hit = false;
+      if (b.friendly) {
+        for (const a of state.agents) {
+          if (!a.alive) continue;
+          const d = Math.hypot(a.x - b.x, a.y - b.y, (a.z - b.z) * 0.45);
+          if (d < 13) {
+            a.fitness -= 2;
+            killAgent(state, a);
+            hit = true;
+            break;
+          }
+        }
+      } else if (!state.player.dead) {
+        const p = state.player;
+        const d = Math.hypot(p.x - b.x, p.y - b.y, (p.z - b.z) * 0.45);
+        if (d < 14) {
+          p.hp -= 0.22;
+          p.flash = 1;
+          spark(state, b.x, b.y, b.z, 8, 100);
+          SFX.hit();
+          if (p.hp <= 0) destroyPlayer(state);
+          hit = true;
+        }
+      }
+      if (hit) state.bolts.splice(i, 1);
+    }
+  }
+
+  function stepFx(state, dt) {
     for (let i = state.sparks.length - 1; i >= 0; i--) {
       const s = state.sparks[i];
       s.life -= dt;
@@ -235,6 +351,11 @@ const World = (() => {
       s.vx *= 0.9;
       s.vy *= 0.9;
       if (s.life <= 0) state.sparks.splice(i, 1);
+    }
+    for (let i = state.booms.length - 1; i >= 0; i--) {
+      const b = state.booms[i];
+      b.t += dt;
+      if (b.t >= b.life) state.booms.splice(i, 1);
     }
     state.shake = Math.max(0, state.shake - dt * 3.2);
   }
@@ -245,14 +366,17 @@ const World = (() => {
     state.genT += dt;
     stepPlayer(state, input, dt);
     const alive = stepAgents(state, dt);
-    stepSparks(state, dt);
+    stepBolts(state, dt);
+    stepFx(state, dt);
 
     let best = 0;
     for (const a of state.agents) if (a.fitness > best) best = a.fitness;
     if (best > state.best) state.best = best;
 
+    const wipe = alive === 0;
+    const down = state.player.dead && state.genT > 0.55;
     let rolled = false;
-    if (input.restart || state.genT >= GEN_TIME) {
+    if (input.restart || state.genT >= GEN_TIME || wipe || down) {
       const { genomes, best: genBest } = GA.nextGeneration(state.agents);
       if (genBest > state.best) state.best = genBest;
       restartGeneration(state, genomes);
