@@ -1,6 +1,6 @@
 /* Tiny feedforward net. Genome is flattened weights + biases. */
 const Net = (() => {
-  const SIZES = [8, 10, 2];
+  const SIZES = [8, 10, 3];
 
   function layerParams(inN, outN) {
     return outN * inN + outN;
