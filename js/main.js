@@ -5,6 +5,7 @@
   const elBest = document.getElementById("best");
   const elAlive = document.getElementById("alive");
   const elHits = document.getElementById("hits");
+  const elKills = document.getElementById("kills");
   const elThreat = document.getElementById("threat");
   const toast = document.getElementById("toast");
 
@@ -177,13 +178,50 @@
 
     const drawList = agents.slice().sort((a, b) => (a.y + a.z) - (b.y + b.z));
     for (const a of drawList) if (a.alive) drawQuad(a, false);
-    drawQuad(player, true);
+    if (!player.dead) drawQuad(player, true);
+
+    for (const b of state.bolts) {
+      const [sx, sy] = screen(b.x, b.y);
+      const hx = Math.cos(b.heading);
+      const hy = Math.sin(b.heading);
+      ctx.strokeStyle = b.friendly ? "rgba(180,255,255,0.95)" : "rgba(255,90,70,0.9)";
+      ctx.shadowColor = b.friendly ? "#7ee7ff" : "#ff5d6c";
+      ctx.shadowBlur = 12;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      ctx.moveTo(sx - hx * 11, sy - hy * 11);
+      ctx.lineTo(sx + hx * 7, sy + hy * 7);
+      ctx.stroke();
+    }
+    ctx.shadowBlur = 0;
+
+    for (const boom of state.booms) {
+      const [sx, sy] = screen(boom.x, boom.y);
+      const u = boom.t / boom.life;
+      const r = (12 + boom.power * 28) * (0.25 + u);
+      ctx.beginPath();
+      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.strokeStyle = boom.friendly
+        ? `rgba(255,210,140,${1 - u})`
+        : `rgba(255,80,70,${1 - u})`;
+      ctx.lineWidth = 3 * (1 - u);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.arc(sx, sy, r * 0.45, 0, Math.PI * 2);
+      ctx.fillStyle = `rgba(255,240,200,${0.35 * (1 - u)})`;
+      ctx.fill();
+    }
 
     for (const s of sparks) {
       const [sx, sy] = screen(s.x, s.y);
       ctx.fillStyle = `rgba(255,210,140,${Math.max(0, s.life * 2)})`;
       ctx.fillRect(sx, sy, 2, 2);
     }
+
+    ctx.fillStyle = "rgba(0,0,0,0.35)";
+    ctx.fillRect(12, view.h - 14, 88, 5);
+    ctx.fillStyle = player.hp > 0.35 ? "#7dffb2" : "#ff5d6c";
+    ctx.fillRect(12, view.h - 14, 88 * Math.max(0, player.hp), 5);
 
     const remain = Math.max(0, World.GEN_TIME - state.genT);
     ctx.fillStyle = "rgba(125,255,178,0.22)";
@@ -199,6 +237,7 @@
     elBest.textContent = state.best.toFixed(1);
     elAlive.textContent = String(agents.filter((a) => a.alive).length);
     elHits.textContent = String(state.hits);
+    if (elKills) elKills.textContent = String(state.kills);
     const label = threat > 0.72 ? "LOCK" : threat > 0.4 ? "CLOSE" : "LOW";
     elThreat.textContent = label;
     elThreat.style.color = threat > 0.72 ? "#ff5d6c" : threat > 0.4 ? "#ffb454" : "#7dffb2";
