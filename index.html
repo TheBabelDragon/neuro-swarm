@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>neuro-swarm</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <canvas id="field"></canvas>
+  <div id="hud">
+    <span>GEN <b id="gen">1</b></span>
+    <span>BEST <b id="best">0</b></span>
+    <span>ALIVE <b id="alive">0</b></span>
+    <span>HITS <b id="hits" class="hit">0</b></span>
+    <span class="hint">WASD / arrows move · space boost · R new generation</span>
+  </div>
+  <div id="toast"></div>
+  <script src="js/net.js"></script>
+  <script src="js/ga.js"></script>
+  <script src="js/flock.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
