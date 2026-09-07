@@ -21,10 +21,12 @@ Then open http://localhost:8080
 Desktop
 - **WASD / arrows** — move
 - **Space / Shift** — boost
+- **F / J / Ctrl** — fire
 - **R** — force new generation
 
 Touch
 - **Left side drag** — virtual stick (appears under your thumb)
+- **FIRE** — lasers
 - **Right side hold** or **BOOST** — boost
 - **GEN** — next generation
 

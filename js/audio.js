@@ -74,6 +74,17 @@ const SFX = (() => {
     blip(240, 0.08, "square", 0.05);
   }
 
+  function zap(friendly) {
+    if (!ready) return;
+    blip(friendly ? 1400 : 880, 0.06, "square", friendly ? 0.045 : 0.035);
+  }
+
+  function boom() {
+    if (!ready) return;
+    blip(55, 0.28, "sawtooth", 0.16);
+    blip(180, 0.12, "triangle", 0.07);
+  }
+
   function boost() {
     if (!ready) return;
     blip(160, 0.12, "triangle", 0.05);
@@ -92,5 +103,5 @@ const SFX = (() => {
     swarmGain.gain.setTargetAtTime(0.05 + t * 0.14, ctx.currentTime, 0.1);
   }
 
-  return { resume, hit, boost, gen, setField };
+  return { resume, hit, boost, gen, zap, boom, setField };
 })();
