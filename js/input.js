@@ -1,7 +1,8 @@
 const Input = (() => {
   const keys = new Set();
   const boostIds = new Set();
-  const state = { x: 0, y: 0, boost: false, restart: false };
+  const fireIds = new Set();
+  const state = { x: 0, y: 0, boost: false, fire: false, restart: false };
 
   let stickId = null;
   let origin = { x: 0, y: 0 };
@@ -11,14 +12,17 @@ const Input = (() => {
   const knob = () => document.getElementById("knob");
   const stickEl = () => document.getElementById("stick");
   const boostEl = () => document.getElementById("boost");
+  const fireEl = () => document.getElementById("fire");
 
   function setKnob(x, y) {
     const k = knob();
     if (k) k.style.transform = `translate(${x * RADIUS}px, ${y * RADIUS}px)`;
   }
 
-  function paintBoost() {
+  function paint() {
     boostEl().classList.toggle("hot", state.boost);
+    const f = fireEl();
+    if (f) f.classList.toggle("hot", state.fire);
   }
 
   function applyStick(clientX, clientY) {
@@ -56,10 +60,12 @@ const Input = (() => {
     window.addEventListener("blur", () => {
       keys.clear();
       boostIds.clear();
+      fireIds.clear();
       parkStick();
     });
 
     const boost = boostEl();
+    const fire = fireEl();
     const gen = document.getElementById("nextgen");
 
     boost.addEventListener("pointerdown", (e) => {
@@ -74,6 +80,19 @@ const Input = (() => {
     boost.addEventListener("pointerleave", releaseBtn);
     boost.addEventListener("pointercancel", releaseBtn);
 
+    if (fire) {
+      fire.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        fireIds.add("btn");
+        SFX.resume();
+      });
+      const releaseFire = (e) => { e.preventDefault(); fireIds.delete("btn"); };
+      fire.addEventListener("pointerup", releaseFire);
+      fire.addEventListener("pointerleave", releaseFire);
+      fire.addEventListener("pointercancel", releaseFire);
+    }
+
     gen.addEventListener("pointerdown", (e) => {
       e.preventDefault();
       e.stopPropagation();
@@ -83,7 +102,7 @@ const Input = (() => {
 
     window.addEventListener("pointerdown", (e) => {
       SFX.resume();
-      if (e.target.closest("#boost") || e.target.closest("#nextgen")) return;
+      if (e.target.closest("#boost") || e.target.closest("#nextgen") || e.target.closest("#fire")) return;
       if (e.clientX >= window.innerWidth * 0.58) {
         boostIds.add(e.pointerId);
         SFX.boost();
@@ -107,6 +126,7 @@ const Input = (() => {
     const end = (e) => {
       if (e.pointerId === stickId) parkStick();
       boostIds.delete(e.pointerId);
+      fireIds.delete(e.pointerId);
     };
     window.addEventListener("pointerup", end);
     window.addEventListener("pointercancel", end);
@@ -127,7 +147,8 @@ const Input = (() => {
     state.x = x;
     state.y = y;
     state.boost = boostIds.size > 0 || keys.has(" ") || keys.has("shift");
-    paintBoost();
+    state.fire = fireIds.size > 0 || keys.has("f") || keys.has("j") || keys.has("k") || keys.has("control");
+    paint();
     return state;
   }
 
