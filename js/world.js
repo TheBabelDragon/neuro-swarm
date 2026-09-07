@@ -1,34 +1,29 @@
 const World = (() => {
-  const SWARM = 48;
-  const GEN_TIME = 22;
-  const HIT_R = 14;
-  const PLAYER_R = 8;
-  const AI_R = 5.5;
+  const SWARM = 56;
+  const GEN_TIME = 24;
+  const HIT_R = 16;
+  const PLAYER_R = 9;
+  const AI_R = 6;
 
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
-  function wrap(v, max) {
-    if (v < 0) return v + max;
-    if (v >= max) return v - max;
-    return v;
-  }
-
-  function heading(vx, vy) {
-    return Math.atan2(vy, vx);
-  }
-
   function makeAgent(genome, w, h) {
     const angle = Math.random() * Math.PI * 2;
-    const speed = 40 + Math.random() * 40;
+    const speed = 36 + Math.random() * 50;
     return {
       genome,
-      x: Math.random() * w,
-      y: Math.random() * h,
+      x: 80 + Math.random() * (w - 160),
+      y: 80 + Math.random() * (h - 160),
+      z: 10 + Math.random() * 26,
       vx: Math.cos(angle) * speed,
       vy: Math.sin(angle) * speed,
+      vz: (Math.random() - 0.5) * 8,
+      heading: angle,
+      bank: 0,
+      rot: Math.random() * Math.PI * 2,
       fitness: 0,
       alive: true,
-      hue: 0,
+      heat: 0,
       trail: [],
     };
   }
@@ -43,13 +38,22 @@ const World = (() => {
       genT: 0,
       best: 0,
       hits: 0,
+      threat: 0,
+      shake: 0,
+      sparks: [],
       player: {
         x: w * 0.5,
         y: h * 0.5,
+        z: 18,
         vx: 0,
         vy: 0,
+        vz: 0,
+        heading: 0,
+        bank: 0,
+        rot: 0,
         boost: 0,
         flash: 0,
+        trail: [],
       },
       agents,
     };
@@ -62,10 +66,7 @@ const World = (() => {
     state.h = h;
     state.player.x *= sx;
     state.player.y *= sy;
-    for (const a of state.agents) {
-      a.x *= sx;
-      a.y *= sy;
-    }
+    for (const a of state.agents) { a.x *= sx; a.y *= sy; }
   }
 
   function restartGeneration(state, genomes) {
@@ -77,21 +78,15 @@ const World = (() => {
     state.player.y = h * 0.5;
     state.player.vx = 0;
     state.player.vy = 0;
-    state.player.flash = 0.6;
+    state.player.flash = 0.45;
+    state.player.trail = [];
   }
 
   function sense(state, a) {
     const p = state.player;
-    let dx = p.x - a.x;
-    let dy = p.y - a.y;
-    if (dx > state.w / 2) dx -= state.w;
-    if (dx < -state.w / 2) dx += state.w;
-    if (dy > state.h / 2) dy -= state.h;
-    if (dy < -state.h / 2) dy += state.h;
+    const dx = p.x - a.x;
+    const dy = p.y - a.y;
     const dist = Math.hypot(dx, dy) || 1;
-    const ndx = dx / state.w;
-    const ndy = dy / state.h;
-    const spd = Math.hypot(a.vx, a.vy);
     const n = Flock.nearest(a, state.agents);
     let nx = 0, ny = 0;
     if (n.agent) {
@@ -99,97 +94,149 @@ const World = (() => {
       ny = (n.agent.y - a.y) / state.h;
     }
     return [
-      clamp(ndx * 2, -1, 1),
-      clamp(ndy * 2, -1, 1),
-      clamp(1 - dist / 420, -1, 1),
+      clamp(dx / (state.w * 0.5), -1, 1),
+      clamp(dy / (state.h * 0.5), -1, 1),
+      clamp(1 - dist / 380, -1, 1),
       clamp(a.vx / 180, -1, 1),
       clamp(a.vy / 180, -1, 1),
-      clamp(spd / 180, 0, 1),
+      clamp(Math.hypot(a.vx, a.vy) / 180, 0, 1),
       clamp(nx * 3, -1, 1),
       clamp(ny * 3, -1, 1),
     ];
   }
 
+  function confine(ent, w, h, margin) {
+    if (ent.x < margin) ent.vx += (margin - ent.x) * 0.08;
+    if (ent.y < margin) ent.vy += (margin - ent.y) * 0.08;
+    if (ent.x > w - margin) ent.vx -= (ent.x - (w - margin)) * 0.08;
+    if (ent.y > h - margin) ent.vy -= (ent.y - (h - margin)) * 0.08;
+    ent.x = clamp(ent.x, 8, w - 8);
+    ent.y = clamp(ent.y, 8, h - 8);
+    ent.z = clamp(ent.z, 6, 42);
+  }
+
+  function pushTrail(ent, max) {
+    ent.trail.push(ent.x, ent.y, ent.z);
+    if (ent.trail.length > max * 3) ent.trail.splice(0, 3);
+  }
+
+  function spark(state, x, y, z, n) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2;
+      const s = 40 + Math.random() * 120;
+      state.sparks.push({
+        x, y, z,
+        vx: Math.cos(a) * s,
+        vy: Math.sin(a) * s,
+        life: 0.25 + Math.random() * 0.35,
+      });
+    }
+  }
+
   function stepPlayer(state, input, dt) {
     const p = state.player;
-    const accel = input.boost ? 420 : 240;
-    const max = input.boost ? 260 : 160;
+    const accel = input.boost ? 520 : 280;
+    const max = input.boost ? 280 : 168;
     p.vx += input.x * accel * dt;
     p.vy += input.y * accel * dt;
-    p.vx *= Math.pow(0.08, dt);
-    p.vy *= Math.pow(0.08, dt);
+    p.vz += ((input.boost ? 24 : 16) - p.z) * 1.8 * dt;
+    p.vx *= Math.pow(0.06, dt);
+    p.vy *= Math.pow(0.06, dt);
+    p.vz *= Math.pow(0.12, dt);
     const s = Math.hypot(p.vx, p.vy);
-    if (s > max) {
-      p.vx = (p.vx / s) * max;
-      p.vy = (p.vy / s) * max;
-    }
-    p.x = wrap(p.x + p.vx * dt, state.w);
-    p.y = wrap(p.y + p.vy * dt, state.h);
-    p.boost = input.boost ? 1 : Math.max(0, p.boost - dt * 3);
+    if (s > max) { p.vx = (p.vx / s) * max; p.vy = (p.vy / s) * max; }
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.z += p.vz * dt;
+    if (s > 12) p.heading = Math.atan2(p.vy, p.vx);
+    const desiredBank = clamp(p.vx / 220, -1, 1);
+    p.bank += (desiredBank - p.bank) * 6 * dt;
+    p.rot += (8 + s / 18 + (input.boost ? 10 : 0)) * dt;
+    p.boost += ((input.boost ? 1 : 0) - p.boost) * 8 * dt;
     p.flash = Math.max(0, p.flash - dt);
+    confine(p, state.w, state.h, 36);
+    pushTrail(p, 16);
   }
 
   function stepAgents(state, dt) {
-    const flockMix = Math.max(0.18, 0.55 - state.generation * 0.02);
-    const netMix = 1 - flockMix * 0.35;
+    const flockMix = Math.max(0.16, 0.52 - state.generation * 0.018);
+    const netMix = 1 - flockMix * 0.32;
     let alive = 0;
+    let closest = 1e9;
     let hitsThis = 0;
 
     for (const a of state.agents) {
       if (!a.alive) continue;
       alive++;
       const out = Net.forward(a.genome, sense(state, a));
-      const turn = out[0] * 7.5;
+      const turn = out[0] * 6.8;
       const thrust = (out[1] + 1) * 0.5;
-      const ang = heading(a.vx, a.vy) + turn * dt;
-      const want = 50 + thrust * 160;
-      let nvx = Math.cos(ang) * want;
-      let nvy = Math.sin(ang) * want;
+      a.heading += turn * dt;
+      const want = 48 + thrust * 168;
+      let nvx = Math.cos(a.heading) * want;
+      let nvy = Math.sin(a.heading) * want;
 
       const f = Flock.accumulate(a, state.agents);
-      nvx += (f.sx * 90 + f.ax * 0.35 + f.cx * 0.9) * flockMix;
-      nvy += (f.sy * 90 + f.ay * 0.35 + f.cy * 0.9) * flockMix;
+      nvx += (f.sx * 95 + f.ax * 0.38 + f.cx * 0.85) * flockMix;
+      nvy += (f.sy * 95 + f.ay * 0.38 + f.cy * 0.85) * flockMix;
 
-      a.vx = a.vx * (1 - netMix * 0.12) + nvx * netMix * 0.12;
-      a.vy = a.vy * (1 - netMix * 0.12) + nvy * netMix * 0.12;
+      a.vx = a.vx * (1 - netMix * 0.14) + nvx * netMix * 0.14;
+      a.vy = a.vy * (1 - netMix * 0.14) + nvy * netMix * 0.14;
+      a.vz += ((14 + Math.sin(state.t * 0.7 + a.x * 0.01) * 8) - a.z) * 1.4 * dt;
       const spd = Math.hypot(a.vx, a.vy);
-      const cap = 190;
-      if (spd > cap) {
-        a.vx = (a.vx / spd) * cap;
-        a.vy = (a.vy / spd) * cap;
-      }
+      if (spd > 198) { a.vx = (a.vx / spd) * 198; a.vy = (a.vy / spd) * 198; }
+      if (spd > 10) a.heading = Math.atan2(a.vy, a.vx);
+      a.bank += (clamp(a.vx / 200, -1, 1) - a.bank) * 5 * dt;
+      a.rot += (7 + spd / 16) * dt;
 
-      a.x = wrap(a.x + a.vx * dt, state.w);
-      a.y = wrap(a.y + a.vy * dt, state.h);
+      a.x += a.vx * dt;
+      a.y += a.vy * dt;
+      a.z += a.vz * dt;
+      confine(a, state.w, state.h, 28);
+      pushTrail(a, 12);
 
-      a.trail.push(a.x, a.y);
-      if (a.trail.length > 28) a.trail.splice(0, 2);
+      const pdx = state.player.x - a.x;
+      const pdy = state.player.y - a.y;
+      const pdz = state.player.z - a.z;
+      const pd = Math.hypot(pdx, pdy, pdz * 0.6);
+      if (pd < closest) closest = pd;
 
-      let pdx = state.player.x - a.x;
-      let pdy = state.player.y - a.y;
-      if (pdx > state.w / 2) pdx -= state.w;
-      if (pdx < -state.w / 2) pdx += state.w;
-      if (pdy > state.h / 2) pdy -= state.h;
-      if (pdy < -state.h / 2) pdy += state.h;
-      const pd = Math.hypot(pdx, pdy);
+      a.fitness += dt * (1.7 / (1 + pd / 70));
+      a.fitness += dt * 0.07 * Math.min(1, spd / 140);
+      if (pd < 80) a.fitness += dt * 0.85;
+      a.heat += ((pd < 140 ? 1 - pd / 140 : 0) - a.heat) * 4 * dt;
 
-      a.fitness += dt * (1.6 / (1 + pd / 80));
-      a.fitness += dt * 0.08 * Math.min(1, spd / 140);
-      if (pd < 90) a.fitness += dt * 0.7;
-
-      if (pd < HIT_R) {
-        a.fitness += 8;
+      if (pd < HIT_R + a.z * 0.04) {
+        a.fitness += 9;
         state.player.flash = 1;
+        state.shake = 1;
         hitsThis++;
-        a.x = wrap(a.x - pdx * 2, state.w);
-        a.y = wrap(a.y - pdy * 2, state.h);
+        spark(state, a.x, a.y, a.z, 10);
+        a.vx -= pdx * 8;
+        a.vy -= pdy * 8;
       }
-
-      a.hue = clamp(1 - pd / 360, 0, 1);
     }
 
     state.hits += hitsThis;
+    state.threat = clamp(1 - closest / 220, 0, 1);
+    if (hitsThis) {
+      SFX.hit();
+      if (navigator.vibrate) navigator.vibrate(18);
+    }
     return alive;
+  }
+
+  function stepSparks(state, dt) {
+    for (let i = state.sparks.length - 1; i >= 0; i--) {
+      const s = state.sparks[i];
+      s.life -= dt;
+      s.x += s.vx * dt;
+      s.y += s.vy * dt;
+      s.vx *= 0.9;
+      s.vy *= 0.9;
+      if (s.life <= 0) state.sparks.splice(i, 1);
+    }
+    state.shake = Math.max(0, state.shake - dt * 3.2);
   }
 
   function step(state, input, dt) {
@@ -198,6 +245,7 @@ const World = (() => {
     state.genT += dt;
     stepPlayer(state, input, dt);
     const alive = stepAgents(state, dt);
+    stepSparks(state, dt);
 
     let best = 0;
     for (const a of state.agents) if (a.fitness > best) best = a.fitness;
@@ -210,7 +258,6 @@ const World = (() => {
       restartGeneration(state, genomes);
       rolled = true;
     }
-
     return { alive, rolled };
   }
 
