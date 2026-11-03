@@ -1,12 +1,16 @@
 # neuro-swarm
 
-Browser-based **neuroevolution drone swarm**.
+Browser-based **neuroevolution drone swarm**, extended toward a **dual-domain**  
+platform: digital simulation + physical ESP32 / LoRa telemetry.
 
-You pilot one quad. The rest are AI agents controlled by tiny neural networks that evolve every generation. They start chaotic and become a coordinated hunt.
+You pilot one quad. The rest are AI agents controlled by tiny neural networks  
+that evolve every generation. They start chaotic and become a coordinated hunt.
 
-Pure static site → GitHub Pages.
+Pure static site → GitHub Pages for the simulator.  
+Physical path: airborne telemetry → LoRa → ground station AP → phone dashboard.
 
-Live: https://thebabeldragon.github.io/neuro-swarm/
+Live sim: https://thebabeldragon.github.io/neuro-swarm/  
+Ground UI (static / demo): open `ground.html` locally or from the ground AP.
 
 ## Run locally
 
@@ -14,9 +18,12 @@ Live: https://thebabeldragon.github.io/neuro-swarm/
 python3 -m http.server 8080
 ```
 
-Then open http://localhost:8080
+Then open:
 
-## Controls
+- http://localhost:8080 — simulation
+- http://localhost:8080/ground.html — telemetry dashboard (use **Demo**)
+
+## Controls (simulation)
 
 Desktop
 - **WASD / arrows** — move
@@ -25,37 +32,31 @@ Desktop
 - **R** — force new generation
 
 Touch
-- **Left side drag** — virtual stick (appears under your thumb)
-- **FIRE** — lasers
-- **Right side hold** or **BOOST** — boost
-- **GEN** — next generation
+- **Left side drag** — virtual stick
+- **FIRE** / **BOOST** / **GEN**
 
-First tap also unlocks the rotor bed / threat tone.
-
-## Stack
-
-- Vanilla JS
-- From-scratch neural nets + genetic algorithm
-- 2.5D quads, follow cam, sparks, Web Audio
-- Light Reynolds flocking under the nets
-
-Part of the broader MetaField / swarm experiments.
-
-## Layout
+## Dual-domain layout
 
 ```
-index.html
-style.css
-js/net.js      tiny feedforward net
-js/ga.js       genetic algorithm
-js/flock.js    separation / alignment / cohesion
-js/audio.js    field tone + hits
-js/input.js    keyboard + touch
-js/world.js    drones, fitness, generations
-js/main.js     camera + render loop
+index.html / style.css / js/{net,ga,flock,audio,input,world,main}.js   # digital swarm
+ground.html / ground.css / js/telemetry/* / js/ground/*               # physical dashboard
+firmware/{common,airborne,ground-station,platform}/                   # ESP32 targets
+hardware/                                                             # Flying Breadboard notes
+docs/                                                                 # architecture & safety
+tests/                                                                # host protocol tests
 ```
 
-Pages: Settings → Pages → Source → GitHub Actions. Until that click, deploys fail.
+## Host tests
+
+```bash
+node tests/protocol/telemetry.test.js
+```
+
+## Branch status
+
+Physical control / autonomous flight are **out of scope**.  
+LoRa chipset adapters are stubs until hardware is selected and documented.  
+See `docs/SAFETY.md` and `docs/ROADMAP.md`.
 
 ## License
 

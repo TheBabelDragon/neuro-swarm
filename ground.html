@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#07090c" />
+  <title>neuro-swarm ground</title>
+  <link rel="stylesheet" href="ground.css" />
+</head>
+<body>
+  <header class="top">
+    <div class="brand">neuro-swarm <span>ground</span></div>
+    <div class="meta">
+      <span id="mode-label" class="mode idle">IDLE</span>
+      <span id="conn-state" class="conn">—</span>
+      <span>AC <b id="ac-count">0</b></span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button type="button" id="btn-demo">Demo</button>
+    <button type="button" id="btn-live">Connect</button>
+    <button type="button" id="btn-clear" class="ghost">Clear</button>
+  </div>
+
+  <p id="stats-line" class="stats">pkts 0 · miss 0 · loss 0%</p>
+
+  <main id="cards" class="cards">
+    <div class="empty">No aircraft yet. Start demo or connect to ground station.</div>
+  </main>
+
+  <footer class="foot">
+    <a href="index.html">Simulation</a>
+    · Local AP default: http://192.168.4.1/ground.html
+    · No external CDNs
+  </footer>
+
+  <script src="js/telemetry/schema.js"></script>
+  <script src="js/telemetry/normalize.js"></script>
+  <script src="js/telemetry/validate.js"></script>
+  <script src="js/ground/aircraft-store.js"></script>
+  <script src="js/ground/websocket.js"></script>
+  <script src="js/ground/diagnostics.js"></script>
+  <script src="js/ground/dashboard.js"></script>
+</body>
+</html>
