@@ -1,70 +1,42 @@
 # neuro-swarm
 
-**Physical swarm control platform** — ESP32 aircraft, LoRa telemetry, local ground station, phone app.
+**Physical swarm control platform** with an **autonomy foundation** (simulation + contracts).
 
-One browser application. Six destinations. Shared protocol v1.
+ESP32 aircraft · LoRa telemetry · ground app · hardware-independent autonomy core.
 
 ```
-Flying Breadboard (ESP32)  →  LoRa  →  ground station AP  →  index.html app
-                                                              ↑
-                                         protocol v1 ─────────┘
-
-lab.html — optional evolution sandbox (not the product surface)
+Telemetry v1 (44 B)  →  ground app destinations
+Autonomy core        →  sim backend (host) · S3 / FC boundaries (stubs)
+Capability message v1 (JSON, separate from telemetry frame)
 ```
 
 ## App destinations
 
-| Destination | Purpose |
-|-------------|---------|
-| **Overview** | Swarm at a glance — counts, loss, link, protocol |
-| **Fleet** | All connected aircraft cards |
-| **Aircraft** | Per-node identity, sensors, power, comms, diagnostics |
-| **Radio** | LoRa / link quality and delivery stats |
-| **Lab** | Link to evolution sandbox |
-| **System** | Ground station, protocol, safety posture |
+Overview · Fleet · Aircraft · Radio · **Autonomy** · System  
+Evolution lab: `lab.html`
 
-Primary entry: **`index.html`** (also what the ground AP should serve).
+Autonomy view runs a **simulation-only** state machine. No remote arming, no motor commands.
 
-Live Pages lab (legacy path still builds static files): https://thebabeldragon.github.io/neuro-swarm/
+## Branches
 
-## Run locally
+- `feat/physical-swarm-lora` — telemetry + app shell  
+- `feat/autonomous-flight-foundation` — this autonomy work (not merged to main)
+
+## Run
 
 ```bash
 python3 -m http.server 8080
-```
+# http://localhost:8080/  → app (Demo + Autonomy)
 
-- http://localhost:8080/ — **app** (use **Demo**)
-- http://localhost:8080/lab.html — evolution lab (auto generations only; no GEN button)
-
-Host protocol tests (unchanged):
-
-```bash
 node tests/protocol/telemetry.test.js
-```
-
-## What is in / out of scope
-
-| Layer | Status |
-|-------|--------|
-| Telemetry protocol v1 | Host-tested |
-| App shell + multi-view UI | On branch |
-| Firmware boundaries | Sketched; radio stubbed |
-| Remote motor control | **Out of scope** |
-| Autonomous flight | **Out of scope** |
-
-## Layout
-
-```
-index.html / css/app.css / js/app/* / js/telemetry/* / js/ground/*
-lab.html / css/lab.css / js/lab/* / js/{net,ga,flock,world,audio}.js
-firmware/  hardware/  docs/  tests/
-ground.html  → redirects to index.html
+node tests/autonomy/autonomy.test.js
 ```
 
 ## Safety
 
-No browser → motor commands. Propellers off until `docs/SAFETY.md` stages pass.  
-LoRa remains behind a stub until module, pins, and regional limits are documented.
+Physical autonomous actuators: **not enabled**.  
+`hardware_validated`: **false**.  
+See `docs/FLIGHT_SAFETY.md`, `docs/AUTONOMY_VALIDATION.md`.
 
 ## License
 
