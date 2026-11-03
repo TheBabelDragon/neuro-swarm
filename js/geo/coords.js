@@ -5,6 +5,8 @@
  *
  * Operational limit: intended for missions within ~50 km of origin.
  * Uses spherical Earth R = 6371000 m. Not a high-precision geodesy library.
+ *
+ * Altitude for conversion: ORIGIN_REL only in this milestone (no silent AGL↔AMSL).
  */
 const GeoCoords = (() => {
   const R = 6371000;
@@ -40,10 +42,9 @@ const GeoCoords = (() => {
     const v = validateLatLon(lat, lon);
     if (!v.ok) return v;
     if (!isFiniteNum(alt_m)) return { ok: false, error: "alt_non_finite" };
-    if (alt_ref !== "AGL" && alt_ref !== "AMSL" && alt_ref !== "ORIGIN_REL") {
+    if (alt_ref !== "ORIGIN_REL") {
       return { ok: false, error: "unsupported_alt_ref" };
     }
-    // No silent AGL↔AMSL conversion — ORIGIN_REL: down = -alt_m (up positive altitude)
     const dLat = (lat - origin.lat) * DEG;
     const dLon = (lon - origin.lon) * DEG;
     const north_m = dLat * R;
