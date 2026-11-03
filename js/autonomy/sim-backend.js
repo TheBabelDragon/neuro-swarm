@@ -23,6 +23,7 @@ const AutonomySimBackend = (() => {
     let missionRt = null;
     let hostMs = 0;
     let sensorMs = 0;
+    let sensorTimeFrozen = false;
     let linkAgeMs = 0;
     let batteryMv = opts.battery_mv != null ? opts.battery_mv : 11800;
     let backendHealthy = true;
@@ -82,7 +83,6 @@ const AutonomySimBackend = (() => {
       if (!safety.applied.allowMission && to === FlightMode.AUTONOMOUS) {
         return { ok: false, error: "safety_blocked", safety: safety.result, mode: sm.mode };
       }
-      // Still allow transitions into safer modes
       return sm.transition(to, reason);
     }
 
@@ -133,7 +133,7 @@ const AutonomySimBackend = (() => {
 
     function step(dt_s) {
       hostMs += Math.round(dt_s * 1000);
-      sensorMs = hostMs; // sim sensors are fresh unless tests corrupt them
+      if (!sensorTimeFrozen) sensorMs = hostMs;
       const safety = runSafety();
 
       if (sm.mode === FlightMode.FAULT || sm.mode === FlightMode.DISARMED) {
@@ -142,13 +142,11 @@ const AutonomySimBackend = (() => {
       }
 
       if (sm.mode === FlightMode.FAILSAFE) {
-        // soft hold in place
         velocity = { north_m_s: 0, east_m_s: 0, down_m_s: 0 };
         return snapshot(safety);
       }
 
       if (sm.mode === FlightMode.LANDING) {
-        // descend toward down_m = 0 (ground in NED: down positive, home at 0)
         const targetDown = 0;
         const err = targetDown - position.down_m;
         velocity.down_m_s = Math.max(-1.0, Math.min(1.0, err));
@@ -182,7 +180,6 @@ const AutonomySimBackend = (() => {
             sm.transition(FlightMode.LANDING);
           }
         } else if (missionRt.paused) {
-          // position hold
           velocity = { north_m_s: 0, east_m_s: 0, down_m_s: 0 };
         }
       }
@@ -227,7 +224,6 @@ const AutonomySimBackend = (() => {
       };
     }
 
-    // Test injectors — never used as production sensor fabrication
     function _testSetBattery(mv) {
       batteryMv = mv;
     }
@@ -238,6 +234,7 @@ const AutonomySimBackend = (() => {
       sensorsValid = v;
     }
     function _testSetSensorStale() {
+      sensorTimeFrozen = true;
       sensorMs = hostMs - (policy.sensor_max_age_ms + 100);
     }
     function _testSetBackendHealthy(v) {
