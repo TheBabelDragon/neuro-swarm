@@ -6,10 +6,13 @@ const assert = require("assert");
 const path = require("path");
 const fs = require("fs");
 
-function loadAs(rel, exportName) {
+function loadAs(rel, exportName, deps = {}) {
   const code = fs.readFileSync(path.join(__dirname, "../..", rel), "utf8");
   const wrapped = code.replace(/if \(typeof module[\s\S]*$/, "");
+  const depNames = Object.keys(deps);
+  const depValues = depNames.map((k) => deps[k]);
   const fn = new Function(
+    ...depNames,
     "globalThis",
     wrapped +
       "; globalThis." +
@@ -20,16 +23,19 @@ function loadAs(rel, exportName) {
       exportName +
       ";"
   );
-  return fn(globalThis);
+  return fn(...depValues, globalThis);
 }
 
 const Schema = loadAs("js/telemetry/schema.js", "TelemetrySchema");
 const Normalize = loadAs("js/telemetry/normalize.js", "TelemetryNormalize");
 const Validate = loadAs("js/telemetry/validate.js", "TelemetryValidate");
-const Adapter = loadAs("js/telemetry/simulator-adapter.js", "SimulatorAdapter");
-globalThis.TelemetrySchema = Schema;
-globalThis.TelemetryNormalize = Normalize;
-const Store = loadAs("js/ground/aircraft-store.js", "AircraftStore");
+const Adapter = loadAs("js/telemetry/simulator-adapter.js", "SimulatorAdapter", {
+  TelemetrySchema: Schema,
+  TelemetryNormalize: Normalize,
+});
+const Store = loadAs("js/ground/aircraft-store.js", "AircraftStore", {
+  TelemetryValidate: Validate,
+});
 
 let passed = 0;
 function ok(name) {
