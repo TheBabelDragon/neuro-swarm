@@ -21,13 +21,13 @@ const AppViews = (() => {
       card("Aircraft", String(list.length), live + " live") +
       card("Packet loss", lossPct + "%", st.totalPackets + " packets") +
       card("Ground link", meta.mode === "live" ? "ACTIVE" : meta.mode === "demo" ? "DEMO" : "IDLE", meta.connText || "—") +
-      card("Protocol", "V1", "44-byte telemetry") +
+      card("Autonomy", "MAP SIM", "kinematic · not flight") +
       "</div>" +
       '<div class="section-title">Aircraft fleet</div>' +
       fleetList(list) +
       (list.length
         ? ""
-        : '<div class="empty">No aircraft yet. Start Demo or Connect to the ground station.</div>')
+        : '<div class="empty">No aircraft yet. Start Demo or Connect to the ground station. Open <b>Autonomy</b> for the geographic simulator.</div>')
     );
   }
 
@@ -199,70 +199,11 @@ const AppViews = (() => {
     );
   }
 
+  /** Legacy panel kept for tests; live Autonomy route uses SimView. */
   function autonomy(simSnap, simCaps, engineStatus) {
-    const mode = (simSnap && simSnap.mode) || "DISARMED";
-    const reason = (simSnap && simSnap.reason) || "NONE";
-    const mission = simSnap && simSnap.mission;
-    const pos = simSnap && simSnap.position_ned;
-    const caps = (simCaps && simCaps.capabilities) || {};
-    const safety = (simCaps && simCaps.safety) || {};
-    const eng = engineStatus || {};
     return (
-      '<div class="section-title">Simulation backend only</div>' +
-      '<p class="muted" style="font-size:12px;line-height:1.45;margin:0 0 12px">' +
-      "Host-side autonomy foundation via safety-gated engine. No browser arming, " +
-      "no motor commands, no physical mission transport." +
-      "</p>" +
-      block(
-        "Flight / autonomy state",
-        row("Mode", mode) +
-          row("Failsafe reason", reason) +
-          row("Backend", (simSnap && simSnap.backend) || "simulation") +
-          row("Hardware validated", eng.hardware_validated || safety.hardware_validated ? "yes" : "no") +
-          row("Actuators", eng.actuators_enabled ? "ENABLED" : "disabled") +
-          row("Operator ack pending", eng.operator_ack_pending ? "yes" : "no")
-      ) +
-      block(
-        "Mission",
-        row("Index", mission ? String(mission.index) : "—") +
-          row("Paused", mission && mission.paused ? "yes" : "no") +
-          row("Completed", mission && mission.completed ? "yes" : "no") +
-          row("Aborted", mission && mission.aborted ? "yes" : "no")
-      ) +
-      block(
-        "Position (NED m)",
-        row("North", pos ? pos.north_m.toFixed(2) : "—") +
-          row("East", pos ? pos.east_m.toFixed(2) : "—") +
-          row("Down", pos ? pos.down_m.toFixed(2) : "—") +
-          row("Battery mV", simSnap ? String(simSnap.battery_mv) : "—")
-      ) +
-      block(
-        "Capabilities",
-        row("Attitude", caps.attitude_estimation ? "yes" : "no") +
-          row("Alt hold", caps.altitude_hold ? "yes" : "no") +
-          row("Pos hold", caps.position_hold ? "yes" : "no") +
-          row("Waypoints", caps.waypoint_navigation ? "yes" : "no") +
-          row("RTH", caps.return_home ? "yes" : "no") +
-          row("Obstacle", caps.obstacle_avoidance ? "yes" : "no")
-      ) +
-      '<div class="section-title">Sim controls</div>' +
-      '<div class="toolbar" style="padding-left:0">' +
-      '<button type="button" class="btn" data-auto="arm">Arm path</button>' +
-      '<button type="button" class="btn" data-auto="mission">Load mission</button>' +
-      '<button type="button" class="btn" data-auto="start">Start auto</button>' +
-      "</div>" +
-      '<div class="toolbar" style="padding-left:0">' +
-      '<button type="button" class="btn ghost" data-auto="pause">Pause</button>' +
-      '<button type="button" class="btn ghost" data-auto="resume">Resume</button>' +
-      '<button type="button" class="btn ghost" data-auto="rth">RTH</button>' +
-      '<button type="button" class="btn ghost" data-auto="abort">Abort</button>' +
-      "</div>" +
-      '<div class="toolbar" style="padding-left:0">' +
-      '<button type="button" class="btn ghost" data-auto="ack">Ack clear</button>' +
-      '<button type="button" class="btn ghost" data-auto="recover">Recover → DISARMED</button>' +
-      "</div>" +
-      '<a class="lab-cta" href="lab.html" style="margin-top:16px">Evolution lab' +
-      "<span>Neural sandbox — separate from autonomy foundation</span></a>"
+      '<div class="section-title">Geographic simulator</div>' +
+      '<p class="muted" style="font-size:12px">Open the Autonomy nav item for the map workspace (SimView).</p>'
     );
   }
 
@@ -270,7 +211,7 @@ const AppViews = (() => {
     return (
       block(
         "Ground station",
-        row("UI", "app shell + autonomy engine") +
+        row("UI", "telemetry + map simulator") +
           row("Mode", (meta.mode || "idle").toUpperCase()) +
           row("AP URL", "http://192.168.4.1/")
       ) +
@@ -278,13 +219,19 @@ const AppViews = (() => {
         "Protocol",
         row("Telemetry", "v1 · 44 bytes") +
           row("Capability / status", "v1 JSON · separate") +
-          row("Autonomy", "software foundation")
+          row("Autonomy", "kinematic map console")
+      ) +
+      block(
+        "Map",
+        row("Provider", "OpenFreeMap liberty") +
+          row("MapLibre", "6.16.0") +
+          row("Fallback", "local grid")
       ) +
       block(
         "Safety",
         row("Remote motors", "disabled") +
           row("Physical auto", "not enabled") +
-          row("Supervisor", "engine-gated")
+          row("Recovery", "no manufactured health")
       ) +
       '<a class="lab-cta" href="lab.html">Open evolution lab<span>Optional sandbox</span></a>'
     );
