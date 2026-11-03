@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="theme-color" content="#07090c" />
+  <title>neuro-swarm lab</title>
+  <link rel="stylesheet" href="css/lab.css" />
+</head>
+<body>
+  <canvas id="field"></canvas>
+
+  <div id="hud">
+    <div class="row">
+      <span class="lab-tag">LAB</span>
+      <span>GEN <b id="gen">1</b></span>
+      <span>BEST <b id="best">0</b></span>
+      <span>ALIVE <b id="alive">0</b></span>
+      <span>HITS <b id="hits" class="hit">0</b></span>
+      <span>KILLS <b id="kills" class="hit">0</b></span>
+      <span>THREAT <b id="threat">LOW</b></span>
+    </div>
+    <span class="hint" id="hint">Evolution lab · generations auto-roll · WASD / stick · SPACE boost · F fire</span>
+  </div>
+
+  <a id="to-app" href="index.html">← Swarm app</a>
+
+  <div id="toast"></div>
+
+  <div id="touch" aria-hidden="true">
+    <div id="stick" class="pad">
+      <div class="ring"></div>
+      <div id="knob" class="knob"></div>
+    </div>
+    <button id="fire" type="button">FIRE</button>
+    <button id="boost" type="button">BOOST</button>
+  </div>
+
+  <script src="js/net.js"></script>
+  <script src="js/ga.js"></script>
+  <script src="js/flock.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/lab/input.js"></script>
+  <script src="js/lab/main.js"></script>
+</body>
+</html>
