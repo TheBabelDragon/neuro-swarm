@@ -5,48 +5,49 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no" />
   <meta name="apple-mobile-web-app-capable" content="yes" />
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#07090c" />
-  <title>neuro-swarm lab</title>
-  <link rel="stylesheet" href="style.css" />
+  <title>neuro-swarm</title>
+  <link rel="stylesheet" href="css/app.css" />
 </head>
 <body>
-  <canvas id="field"></canvas>
-
-  <div id="hud">
-    <div class="row">
-      <span class="lab-tag">LAB</span>
-      <span>GEN <b id="gen">1</b></span>
-      <span>BEST <b id="best">0</b></span>
-      <span>ALIVE <b id="alive">0</b></span>
-      <span>HITS <b id="hits" class="hit">0</b></span>
-      <span>KILLS <b id="kills" class="hit">0</b></span>
-      <span>THREAT <b id="threat">LOW</b></span>
+  <header class="app-header">
+    <div class="brand-block">
+      <div class="brand">NEURO-SWARM</div>
+      <div class="tagline">Physical swarm control platform</div>
     </div>
-    <span class="hint" id="hint">Evolution lab · WASD / stick · SPACE boost · F fire · generations roll automatically</span>
+    <div class="header-meta">
+      <span id="hdr-mode" class="pill idle">IDLE</span>
+      <span id="hdr-conn" class="muted">—</span>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <button type="button" id="btn-demo" class="btn">Demo</button>
+    <button type="button" id="btn-live" class="btn">Connect</button>
+    <button type="button" id="btn-clear" class="btn ghost">Clear</button>
   </div>
 
-  <a id="to-ground" href="ground.html">Ground station →</a>
+  <main id="view-root" class="view-root"></main>
 
-  <div id="toast"></div>
+  <nav class="app-nav" aria-label="Primary">
+    <button type="button" data-view="overview" class="nav-item active">Overview</button>
+    <button type="button" data-view="fleet" class="nav-item">Fleet</button>
+    <button type="button" data-view="aircraft" class="nav-item">Aircraft</button>
+    <button type="button" data-view="radio" class="nav-item">Radio</button>
+    <button type="button" data-view="lab" class="nav-item">Lab</button>
+    <button type="button" data-view="system" class="nav-item">System</button>
+  </nav>
 
-  <div id="touch" aria-hidden="true">
-    <div id="stick" class="pad">
-      <div class="ring"></div>
-      <div id="knob" class="knob"></div>
-    </div>
-    <button id="fire" type="button">FIRE</button>
-    <button id="boost" type="button">BOOST</button>
-    <!-- GEN retained for lab use but visually secondary; auto-roll still primary -->
-    <button id="nextgen" type="button" class="lab-secondary" title="Force next generation (lab)">↻</button>
-  </div>
+  <p class="disclaimer">Synthetic demo values are labeled. Live hardware requires ground-station AP.</p>
 
-  <script src="js/net.js"></script>
-  <script src="js/ga.js"></script>
-  <script src="js/flock.js"></script>
-  <script src="js/audio.js"></script>
-  <script src="js/world.js"></script>
-  <script src="js/input.js"></script>
-  <script src="js/main.js"></script>
+  <script src="js/telemetry/schema.js"></script>
+  <script src="js/telemetry/normalize.js"></script>
+  <script src="js/telemetry/validate.js"></script>
+  <script src="js/ground/aircraft-store.js"></script>
+  <script src="js/ground/websocket.js"></script>
+  <script src="js/ground/diagnostics.js"></script>
+  <script src="js/app/router.js"></script>
+  <script src="js/app/views.js"></script>
+  <script src="js/app/app.js"></script>
 </body>
 </html>
