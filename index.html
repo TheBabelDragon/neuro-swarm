@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
   <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#07090c" />
-  <title>neuro-swarm</title>
+  <title>neuro-swarm lab</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
@@ -15,6 +15,7 @@
 
   <div id="hud">
     <div class="row">
+      <span class="lab-tag">LAB</span>
       <span>GEN <b id="gen">1</b></span>
       <span>BEST <b id="best">0</b></span>
       <span>ALIVE <b id="alive">0</b></span>
@@ -22,8 +23,10 @@
       <span>KILLS <b id="kills" class="hit">0</b></span>
       <span>THREAT <b id="threat">LOW</b></span>
     </div>
-    <span class="hint" id="hint">WASD / stick · SPACE boost · F / FIRE · R next gen</span>
+    <span class="hint" id="hint">Evolution lab · WASD / stick · SPACE boost · F fire · generations roll automatically</span>
   </div>
+
+  <a id="to-ground" href="ground.html">Ground station →</a>
 
   <div id="toast"></div>
 
@@ -34,7 +37,8 @@
     </div>
     <button id="fire" type="button">FIRE</button>
     <button id="boost" type="button">BOOST</button>
-    <button id="nextgen" type="button">GEN</button>
+    <!-- GEN retained for lab use but visually secondary; auto-roll still primary -->
+    <button id="nextgen" type="button" class="lab-secondary" title="Force next generation (lab)">↻</button>
   </div>
 
   <script src="js/net.js"></script>
