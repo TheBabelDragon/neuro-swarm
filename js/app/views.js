@@ -1,4 +1,4 @@
-/** View renderers for Overview / Fleet / Aircraft / Radio / Lab / System. */
+/** View renderers — Overview / Fleet / Aircraft / Radio / Autonomy / System. */
 const AppViews = (() => {
   function fmtId(id) {
     return GroundDiagnostics.formatId(id);
@@ -99,7 +99,7 @@ const AppViews = (() => {
     if (!a) {
       return (
         '<button type="button" class="back-link" data-nav="fleet">← Fleet</button>' +
-        '<div class="empty">Aircraft not in store (stale session or cleared).</div>'
+        '<div class="empty">Aircraft not in store.</div>'
       );
     }
     const flags = a.statusFlags || {};
@@ -113,14 +113,15 @@ const AppViews = (() => {
       fmtId(a.aircraftId) +
       " · " +
       (a.connection || "").toUpperCase() +
+      " · source " +
+      (a.source || "—") +
       "</div></header>" +
       block(
         "Identity",
         row("Aircraft ID", fmtId(a.aircraftId)) +
           row("Sequence", String(a.sequence)) +
           row("Uptime", a.uptimeS + " s") +
-          row("Source", a.source || "—") +
-          row("Protocol", "v1")
+          row("Source", a.source || "—")
       ) +
       block(
         "Sensors",
@@ -131,28 +132,20 @@ const AppViews = (() => {
       ) +
       block(
         "Power",
-        row("Battery", GroundDiagnostics.batteryLabel(a.battery)) +
-          row("Low battery", flags.lowBattery ? "yes" : "no")
+        row("Battery", GroundDiagnostics.batteryLabel(a.battery))
       ) +
       block(
         "Communications",
         row("RSSI", GroundDiagnostics.formatRssi(a.rssi)) +
           row("SNR", GroundDiagnostics.formatSnr(a.snr)) +
-          row("Packet loss", ((a.packetLossEstimate || 0) * 100).toFixed(1) + "%") +
-          row("Last packet age", GroundDiagnostics.formatAge(a.ageMs))
+          row("Loss", ((a.packetLossEstimate || 0) * 100).toFixed(1) + "%") +
+          row("Age", GroundDiagnostics.formatAge(a.ageMs))
       ) +
       block(
         "Diagnostics",
         row("Sensor fault", flags.sensorFault ? "yes" : "no") +
           row("Radio fault", flags.radioFault ? "yes" : "no") +
-          row("Armed (info)", flags.armed ? "yes" : "no") +
-          row("Demo flag", flags.demo ? "yes" : "no") +
-          '<div class="flags">' +
-          Object.keys(flags)
-            .filter((k) => flags[k])
-            .map((k) => '<span class="flag">' + k + "</span>")
-            .join("") +
-          "</div>"
+          row("Demo", flags.demo ? "yes" : "no")
       )
     );
   }
@@ -161,20 +154,14 @@ const AppViews = (() => {
     return (
       '<section class="detail-block"><h3>' +
       title +
-      "</h3><div class=\"grid-2\">" +
+      '</h3><div class="grid-2">' +
       inner +
       "</div></section>"
     );
   }
 
   function row(label, value) {
-    return (
-      "<div><label>" +
-      label +
-      "</label><b>" +
-      value +
-      "</b></div>"
-    );
+    return "<div><label>" + label + "</label><b>" + value + "</b></div>";
   }
 
   function radio(store, meta) {
@@ -189,9 +176,7 @@ const AppViews = (() => {
           GroundDiagnostics.formatRssi(a.rssi) +
           " / " +
           GroundDiagnostics.formatSnr(a.snr) +
-          " · loss " +
-          ((a.packetLossEstimate || 0) * 100).toFixed(1) +
-          "%</b></div>"
+          "</b></div>"
       )
       .join("");
     return (
@@ -199,32 +184,85 @@ const AppViews = (() => {
         "Receiver",
         row("Link mode", (meta.mode || "idle").toUpperCase()) +
           row("Connection", meta.connText || "—") +
-          row("Chipset adapter", "stub-no-radio (until configured)") +
-          row("Regional config", "not set — see docs/LORA_TRANSPORT.md")
+          row("Chipset", "stub until configured")
       ) +
       block(
         "Delivery",
-        row("Total packets", String(st.totalPackets)) +
-          row("Missing (est.)", String(st.totalMissing)) +
-          row("Global loss", (st.globalLoss * 100).toFixed(1) + "%") +
-          row("Aircraft tracked", String(st.aircraftCount))
+        row("Packets", String(st.totalPackets)) +
+          row("Missing", String(st.totalMissing)) +
+          row("Loss", (st.globalLoss * 100).toFixed(1) + "%")
       ) +
-      '<div class="section-title">Per-aircraft link</div>' +
+      '<div class="section-title">Per-aircraft</div>' +
       (rows
         ? '<section class="detail-block"><div class="grid-2">' + rows + "</div></section>"
-        : '<div class="empty">No radio samples yet.</div>')
+        : '<div class="empty">No samples.</div>')
     );
   }
 
-  function lab() {
+  function autonomy(simSnap, simCaps, engineStatus) {
+    const mode = (simSnap && simSnap.mode) || "DISARMED";
+    const reason = (simSnap && simSnap.reason) || "NONE";
+    const mission = simSnap && simSnap.mission;
+    const pos = simSnap && simSnap.position_ned;
+    const caps = (simCaps && simCaps.capabilities) || {};
+    const safety = (simCaps && simCaps.safety) || {};
+    const eng = engineStatus || {};
     return (
-      '<div class="section-title">Evolution lab</div>' +
-      '<p class="muted" style="font-size:13px;line-height:1.5;margin:0 0 12px">' +
-      "Neural nets, genetic evolution, and flocking remain available as an experimental sandbox. " +
-      "They are not the primary control surface and do not command physical motors." +
+      '<div class="section-title">Simulation backend only</div>' +
+      '<p class="muted" style="font-size:12px;line-height:1.45;margin:0 0 12px">' +
+      "Host-side autonomy foundation via safety-gated engine. No browser arming, " +
+      "no motor commands, no physical mission transport." +
       "</p>" +
-      '<a class="lab-cta" href="lab.html">Open evolution lab' +
-      "<span>Auto-rolling generations · no GEN control · no remote flight</span></a>"
+      block(
+        "Flight / autonomy state",
+        row("Mode", mode) +
+          row("Failsafe reason", reason) +
+          row("Backend", (simSnap && simSnap.backend) || "simulation") +
+          row("Hardware validated", eng.hardware_validated || safety.hardware_validated ? "yes" : "no") +
+          row("Actuators", eng.actuators_enabled ? "ENABLED" : "disabled") +
+          row("Operator ack pending", eng.operator_ack_pending ? "yes" : "no")
+      ) +
+      block(
+        "Mission",
+        row("Index", mission ? String(mission.index) : "—") +
+          row("Paused", mission && mission.paused ? "yes" : "no") +
+          row("Completed", mission && mission.completed ? "yes" : "no") +
+          row("Aborted", mission && mission.aborted ? "yes" : "no")
+      ) +
+      block(
+        "Position (NED m)",
+        row("North", pos ? pos.north_m.toFixed(2) : "—") +
+          row("East", pos ? pos.east_m.toFixed(2) : "—") +
+          row("Down", pos ? pos.down_m.toFixed(2) : "—") +
+          row("Battery mV", simSnap ? String(simSnap.battery_mv) : "—")
+      ) +
+      block(
+        "Capabilities",
+        row("Attitude", caps.attitude_estimation ? "yes" : "no") +
+          row("Alt hold", caps.altitude_hold ? "yes" : "no") +
+          row("Pos hold", caps.position_hold ? "yes" : "no") +
+          row("Waypoints", caps.waypoint_navigation ? "yes" : "no") +
+          row("RTH", caps.return_home ? "yes" : "no") +
+          row("Obstacle", caps.obstacle_avoidance ? "yes" : "no")
+      ) +
+      '<div class="section-title">Sim controls</div>' +
+      '<div class="toolbar" style="padding-left:0">' +
+      '<button type="button" class="btn" data-auto="arm">Arm path</button>' +
+      '<button type="button" class="btn" data-auto="mission">Load mission</button>' +
+      '<button type="button" class="btn" data-auto="start">Start auto</button>' +
+      "</div>" +
+      '<div class="toolbar" style="padding-left:0">' +
+      '<button type="button" class="btn ghost" data-auto="pause">Pause</button>' +
+      '<button type="button" class="btn ghost" data-auto="resume">Resume</button>' +
+      '<button type="button" class="btn ghost" data-auto="rth">RTH</button>' +
+      '<button type="button" class="btn ghost" data-auto="abort">Abort</button>' +
+      "</div>" +
+      '<div class="toolbar" style="padding-left:0">' +
+      '<button type="button" class="btn ghost" data-auto="ack">Ack clear</button>' +
+      '<button type="button" class="btn ghost" data-auto="recover">Recover → DISARMED</button>' +
+      "</div>" +
+      '<a class="lab-cta" href="lab.html" style="margin-top:16px">Evolution lab' +
+      "<span>Neural sandbox — separate from autonomy foundation</span></a>"
     );
   }
 
@@ -232,25 +270,23 @@ const AppViews = (() => {
     return (
       block(
         "Ground station",
-        row("UI build", "app shell v1") +
+        row("UI", "app shell + autonomy engine") +
           row("Mode", (meta.mode || "idle").toUpperCase()) +
-          row("Default AP URL", "http://192.168.4.1/") +
-          row("WebSocket", "ws://&lt;host&gt;:81/")
+          row("AP URL", "http://192.168.4.1/")
       ) +
       block(
         "Protocol",
-        row("Version", "1") +
-          row("Frame size", "44 bytes") +
-          row("Integrity", "CRC-16/CCITT-FALSE") +
-          row("Byte order", "little-endian")
+        row("Telemetry", "v1 · 44 bytes") +
+          row("Capability / status", "v1 JSON · separate") +
+          row("Autonomy", "software foundation")
       ) +
       block(
         "Safety",
-        row("Remote motor control", "disabled") +
-          row("Autonomous flight", "out of scope") +
-          row("Radio hardware", "stub until documented")
+        row("Remote motors", "disabled") +
+          row("Physical auto", "not enabled") +
+          row("Supervisor", "engine-gated")
       ) +
-      '<p class="muted" style="font-size:12px;margin-top:12px">See docs/ for architecture, telemetry, LoRa, and staged verification.</p>'
+      '<a class="lab-cta" href="lab.html">Open evolution lab<span>Optional sandbox</span></a>'
     );
   }
 
@@ -259,7 +295,7 @@ const AppViews = (() => {
     fleet,
     aircraftDetail,
     radio,
-    lab,
+    autonomy,
     system,
     nameFor,
   };

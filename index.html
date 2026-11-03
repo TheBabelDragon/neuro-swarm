@@ -34,11 +34,11 @@
     <button type="button" data-view="fleet" class="nav-item">Fleet</button>
     <button type="button" data-view="aircraft" class="nav-item">Aircraft</button>
     <button type="button" data-view="radio" class="nav-item">Radio</button>
-    <button type="button" data-view="lab" class="nav-item">Lab</button>
+    <button type="button" data-view="autonomy" class="nav-item">Autonomy</button>
     <button type="button" data-view="system" class="nav-item">System</button>
   </nav>
 
-  <p class="disclaimer">Synthetic demo values are labeled. Live hardware requires ground-station AP.</p>
+  <p class="disclaimer">Simulation &amp; demo only for autonomy. No remote arming or motor commands.</p>
 
   <script src="js/telemetry/schema.js"></script>
   <script src="js/telemetry/normalize.js"></script>
@@ -46,6 +46,14 @@
   <script src="js/ground/aircraft-store.js"></script>
   <script src="js/ground/websocket.js"></script>
   <script src="js/ground/diagnostics.js"></script>
+  <script src="js/autonomy/types.js"></script>
+  <script src="js/autonomy/state-machine.js"></script>
+  <script src="js/autonomy/safety.js"></script>
+  <script src="js/autonomy/mission.js"></script>
+  <script src="js/autonomy/sim-backend.js"></script>
+  <script src="js/autonomy/engine.js"></script>
+  <script src="js/autonomy/capability-message.js"></script>
+  <script src="js/autonomy/status-message.js"></script>
   <script src="js/app/router.js"></script>
   <script src="js/app/views.js"></script>
   <script src="js/app/app.js"></script>
