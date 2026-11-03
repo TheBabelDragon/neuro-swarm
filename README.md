@@ -1,31 +1,31 @@
 # neuro-swarm
 
-**Physical neuro-swarm platform** — ESP32 aircraft, LoRa telemetry, local ground station, phone dashboard — with a browser evolution lab for neural agents.
+**Physical swarm control platform** — ESP32 aircraft, LoRa telemetry, local ground station, phone app.
 
-This is no longer “just a browser game.” The center of gravity is the **shared telemetry contract** and the path from airborne nodes to a ground receiver you can open on a phone without the internet.
+One browser application. Six destinations. Shared protocol v1.
 
 ```
-Flying Breadboard (ESP32)  →  LoRa  →  ground station AP  →  ground.html
+Flying Breadboard (ESP32)  →  LoRa  →  ground station AP  →  index.html app
                                                               ↑
-                                         shared protocol v1 ──┘
+                                         protocol v1 ─────────┘
 
-Browser lab (index.html) remains for neuroevolution experiments and
-simulator → telemetry adapter work. It is not the product surface.
+lab.html — optional evolution sandbox (not the product surface)
 ```
 
-Live lab (GitHub Pages): https://thebabeldragon.github.io/neuro-swarm/  
-Ground UI: `ground.html` (demo mode works with no hardware)
+## App destinations
 
-## What works now
+| Destination | Purpose |
+|-------------|---------|
+| **Overview** | Swarm at a glance — counts, loss, link, protocol |
+| **Fleet** | All connected aircraft cards |
+| **Aircraft** | Per-node identity, sensors, power, comms, diagnostics |
+| **Radio** | LoRa / link quality and delivery stats |
+| **Lab** | Link to evolution sandbox |
+| **System** | Ground station, protocol, safety posture |
 
-| Layer | Status |
-|-------|--------|
-| Telemetry protocol v1 (44-byte binary + CRC) | Host-tested |
-| Phone ground dashboard + multi-aircraft store | Static + demo stream |
-| Airborne / ground firmware boundaries | Sketched, radio stubbed |
-| LoRa chipset adapter | Stub until module + region chosen |
-| Evolution lab (old sim) | Intact, secondary entry |
-| Remote motor control / autonomous flight | **Out of scope** |
+Primary entry: **`index.html`** (also what the ground AP should serve).
+
+Live Pages lab (legacy path still builds static files): https://thebabeldragon.github.io/neuro-swarm/
 
 ## Run locally
 
@@ -33,40 +33,38 @@ Ground UI: `ground.html` (demo mode works with no hardware)
 python3 -m http.server 8080
 ```
 
-- http://localhost:8080/ground.html — **primary UI** (tap **Demo**)
-- http://localhost:8080/ — evolution lab (optional)
+- http://localhost:8080/ — **app** (use **Demo**)
+- http://localhost:8080/lab.html — evolution lab (auto generations only; no GEN button)
 
-Host protocol tests:
+Host protocol tests (unchanged):
 
 ```bash
 node tests/protocol/telemetry.test.js
 ```
 
+## What is in / out of scope
+
+| Layer | Status |
+|-------|--------|
+| Telemetry protocol v1 | Host-tested |
+| App shell + multi-view UI | On branch |
+| Firmware boundaries | Sketched; radio stubbed |
+| Remote motor control | **Out of scope** |
+| Autonomous flight | **Out of scope** |
+
 ## Layout
 
 ```
-ground.html / ground.css / js/telemetry/* / js/ground/*   # ground surface
-firmware/{common,airborne,ground-station,platform}/      # ESP32 targets
-hardware/                                                # Flying Breadboard
-docs/                                                    # architecture & safety
-tests/                                                   # host protocol tests
-index.html / style.css / js/{net,ga,flock,...}.js        # evolution lab
+index.html / css/app.css / js/app/* / js/telemetry/* / js/ground/*
+lab.html / css/lab.css / js/lab/* / js/{net,ga,flock,world,audio}.js
+firmware/  hardware/  docs/  tests/
+ground.html  → redirects to index.html
 ```
 
 ## Safety
 
-No autonomous flight. No browser → motor commands. Propellers off until the staged checks in `docs/SAFETY.md` pass. LoRa stays disabled behind a stub until pins, antenna, and regional limits are documented.
-
-## Docs
-
-- `docs/ARCHITECTURE.md`
-- `docs/TELEMETRY_PROTOCOL.md`
-- `docs/LORA_TRANSPORT.md`
-- `docs/GROUND_STATION.md`
-- `docs/AIRCRAFT_FIRMWARE.md`
-- `docs/HARDWARE_COMPATIBILITY.md`
-- `docs/SAFETY.md`
-- `docs/ROADMAP.md`
+No browser → motor commands. Propellers off until `docs/SAFETY.md` stages pass.  
+LoRa remains behind a stub until module, pins, and regional limits are documented.
 
 ## License
 

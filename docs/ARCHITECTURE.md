@@ -1,55 +1,36 @@
-# Architecture — Dual-Domain Neuro-Swarm
+# Architecture — Neuro-Swarm application
 
-## Center of gravity
+## Product surface
 
-**Physical swarm + shared telemetry** is the product direction.  
-The browser evolution lab is retained as a secondary surface for neuroevolution experiments and the simulator→telemetry adapter — not as the primary user experience.
+**One browser application** (`index.html`) with destinations:
+
+Overview · Fleet · Aircraft · Radio · Lab · System
+
+The evolution simulator is **`lab.html`**, linked from Lab — not the homepage.
+
+`ground.html` redirects to the app for older bookmarks and AP configs.
 
 ## Domains
 
-### A. Physical swarm (primary)
+### Physical swarm (primary)
 
-- ESP32 airborne nodes (telemetry source)
-- LoRa transport (chipset-agnostic abstraction)
-- ESP32 ground station (RX, multi-aircraft state, local AP, HTTP/WS)
-- Phone browser dashboard (`ground.html`)
+- ESP32 airborne telemetry sources
+- LoRa transport abstraction (stub until hardware selected)
+- Ground station RX + local AP (firmware target)
+- App: multi-aircraft store, detail views, radio diagnostics
 
-### B. Digital lab (secondary)
+### Evolution lab (secondary)
 
-- Browser simulation (`index.html` + `js/*`)
-- Neural nets (`net.js`), genetic algorithm (`ga.js`), flocking (`flock.js`)
-- World lifecycle and rendering (`world.js`, `main.js`)
-- Optional force-generation control (demoted UI); generations still auto-roll
-
-The lab is **not** replaced by the hardware dashboard; it is framed as a lab.
+- Neural nets, GA, flocking, 2.5D field
+- Generations **auto-roll only** — no GEN button, no R force-restart in lab UI
+- Does not command physical motors
 
 ## Shared contract
 
-All physical and synthetic sources speak **Telemetry Protocol v1**  
-(`js/telemetry/schema.js` and `firmware/common/protocol/`).
+Telemetry Protocol v1 — `js/telemetry/*` and `firmware/common/protocol/`.
 
-Identity, sequence, sensors, and integrity are transport-independent.
+Aircraft have **identities, uptime, telemetry, health, connectivity** — not “generations.”
 
-## Separation of concerns
+## Offline / AP
 
-| Concept | Module |
-|---------|--------|
-| Simulated aircraft | `world.js` + `simulator-adapter.js` |
-| Physical aircraft | airborne firmware |
-| Ground receiver | ground-station firmware |
-| Radio transport | `firmware/platform/lora_transport.h` + adapters |
-| Shared swarm identity | `aircraft_id` in protocol |
-| Dashboard | `ground.html` + `js/ground/*` |
-
-**No** automatic mapping from neural-network outputs to physical motor commands.  
-Physical control is a future, safety-reviewed subsystem.
-
-## Multi-aircraft
-
-Ground station and dashboard are built around a map of `aircraft_id → latest telemetry`.  
-Bounded slots (firmware) and bounded cards (UI) support growth without redesign.
-
-## Deployment surfaces
-
-1. Ground station AP — serves `ground.html` and WebSocket telemetry without internet (target).
-2. GitHub Pages — static ground UI (demo mode) + evolution lab.
+The app is static assets only (no CDN). Intended to be served from the ESP32 softAP the same way GitHub Pages serves them today.
