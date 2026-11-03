@@ -43,7 +43,6 @@ const AutonomyCapabilityMessage = loadAs(
   "AutonomyCapabilityMessage"
 );
 
-// Existing telemetry still loads
 const TelemetrySchema = loadAs("js/telemetry/schema.js", "TelemetrySchema");
 
 let passed = 0;
@@ -56,7 +55,6 @@ const { FlightMode, FailsafeReason } = AutonomyTypes;
 
 console.log("autonomy foundation tests");
 
-// State transitions
 {
   const sm = AutonomyStateMachine.create();
   assert.strictEqual(sm.mode, FlightMode.DISARMED);
@@ -67,7 +65,6 @@ console.log("autonomy foundation tests");
   ok("legal transitions");
 }
 
-// Invalid rejection
 {
   const sm = AutonomyStateMachine.create(FlightMode.LANDED);
   const r = sm.transition(FlightMode.AUTONOMOUS);
@@ -76,7 +73,6 @@ console.log("autonomy foundation tests");
   ok("invalid transition rejected");
 }
 
-// Mission validation
 {
   const caps = AutonomyTypes.emptyCapabilities();
   caps.waypoint_navigation = true;
@@ -96,7 +92,6 @@ console.log("autonomy foundation tests");
   ok("mission validation");
 }
 
-// Missing capabilities
 {
   const caps = AutonomyTypes.emptyCapabilities();
   const r = AutonomyMission.validatePlan(
@@ -107,7 +102,6 @@ console.log("autonomy foundation tests");
   ok("missing capabilities block mission");
 }
 
-// Waypoint progression deterministic
 {
   const backend = AutonomySimBackend.create({ speed_m_s: 5 });
   backend.armPreflight();
@@ -127,7 +121,6 @@ console.log("autonomy foundation tests");
   ok("waypoint progression / mission completion");
 }
 
-// Pause resume abort
 {
   const backend = AutonomySimBackend.create({ speed_m_s: 2 });
   backend.armPreflight();
@@ -146,7 +139,6 @@ console.log("autonomy foundation tests");
   ok("pause resume abort");
 }
 
-// Capability discovery message
 {
   const backend = AutonomySimBackend.create({ aircraft_id: "SIM-9" });
   const enc = AutonomyCapabilityMessage.encode(
@@ -160,7 +152,6 @@ console.log("autonomy foundation tests");
   ok("capability discovery encode/decode");
 }
 
-// Stale sensors -> failsafe
 {
   const backend = AutonomySimBackend.create();
   backend.armPreflight();
@@ -175,12 +166,9 @@ console.log("autonomy foundation tests");
   ok("stale sensors failsafe");
 }
 
-// Invalid sensors
 {
   const backend = AutonomySimBackend.create();
   backend.armPreflight();
-  backend.startAutonomous();
-  // no mission -> may fail start; force mode via READY then inject
   backend.requestMode(FlightMode.MANUAL);
   backend._testSetSensorsValid(false);
   backend.step(0.1);
@@ -188,7 +176,6 @@ console.log("autonomy foundation tests");
   ok("invalid sensors failsafe");
 }
 
-// Geofence
 {
   const backend = AutonomySimBackend.create({
     policy: { geofence_radius_m: 5, geofence_enabled: true },
@@ -202,7 +189,6 @@ console.log("autonomy foundation tests");
   ok("geofence violation");
 }
 
-// Battery critical
 {
   const backend = AutonomySimBackend.create();
   backend.armPreflight();
@@ -214,7 +200,6 @@ console.log("autonomy foundation tests");
   ok("battery critical policy");
 }
 
-// Link loss -> return home policy
 {
   const backend = AutonomySimBackend.create({
     policy: { link_loss_policy: AutonomyTypes.LinkLossPolicy.RETURN_HOME, link_max_age_ms: 500 },
@@ -225,6 +210,7 @@ console.log("autonomy foundation tests");
     home_ned: { north_m: 0, east_m: 0, down_m: 0 },
   });
   backend.startAutonomous();
+  backend._testSetPosition({ north_m: 12, east_m: 0, down_m: -5 });
   backend._testSetLinkAge(5000);
   backend.step(0.1);
   assert.strictEqual(backend.mode, FlightMode.RETURN_HOME);
@@ -232,7 +218,6 @@ console.log("autonomy foundation tests");
   ok("link-loss return home");
 }
 
-// Backend failure
 {
   const backend = AutonomySimBackend.create();
   backend.armPreflight();
@@ -243,7 +228,6 @@ console.log("autonomy foundation tests");
   ok("backend failure failsafe");
 }
 
-// Watchdog -> fault
 {
   const backend = AutonomySimBackend.create();
   backend.armPreflight();
@@ -254,7 +238,6 @@ console.log("autonomy foundation tests");
   ok("watchdog fault");
 }
 
-// Safety blocks autonomous start
 {
   const backend = AutonomySimBackend.create();
   backend.armPreflight();
@@ -268,7 +251,6 @@ console.log("autonomy foundation tests");
   ok("safety blocks mission start");
 }
 
-// Simulation determinism (same steps -> same position)
 {
   function run() {
     const b = AutonomySimBackend.create({ speed_m_s: 3 });
@@ -287,7 +269,6 @@ console.log("autonomy foundation tests");
   ok("simulation determinism");
 }
 
-// Telemetry v1 still works (protocol compatibility)
 {
   const buf = TelemetrySchema.encode({
     aircraftId: 1,
@@ -312,7 +293,6 @@ console.log("autonomy foundation tests");
   ok("telemetry v1 protocol compatibility");
 }
 
-// hardware_validated never true on sim
 {
   const c = AutonomySimBackend.create().capabilities();
   assert.strictEqual(c.safety.hardware_validated, false);
