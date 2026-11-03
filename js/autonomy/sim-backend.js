@@ -237,6 +237,10 @@ const AutonomySimBackend = (() => {
       sensorTimeFrozen = true;
       sensorMs = hostMs - (policy.sensor_max_age_ms + 100);
     }
+    function _testClearSensorFreeze() {
+      sensorTimeFrozen = false;
+      sensorMs = hostMs;
+    }
     function _testSetBackendHealthy(v) {
       backendHealthy = v;
     }
@@ -258,6 +262,7 @@ const AutonomySimBackend = (() => {
       resumeMission,
       abortMission,
       requestReturnHome,
+      runSafety,
       step,
       get mode() {
         return sm.mode;
@@ -269,6 +274,7 @@ const AutonomySimBackend = (() => {
       _testSetLinkAge,
       _testSetSensorsValid,
       _testSetSensorStale,
+      _testClearSensorFreeze,
       _testSetBackendHealthy,
       _testSetWatchdog,
       _testSetPosition,
