@@ -1,16 +1,31 @@
 # neuro-swarm
 
-Browser-based **neuroevolution drone swarm**, extended toward a **dual-domain**  
-platform: digital simulation + physical ESP32 / LoRa telemetry.
+**Physical neuro-swarm platform** — ESP32 aircraft, LoRa telemetry, local ground station, phone dashboard — with a browser evolution lab for neural agents.
 
-You pilot one quad. The rest are AI agents controlled by tiny neural networks  
-that evolve every generation. They start chaotic and become a coordinated hunt.
+This is no longer “just a browser game.” The center of gravity is the **shared telemetry contract** and the path from airborne nodes to a ground receiver you can open on a phone without the internet.
 
-Pure static site → GitHub Pages for the simulator.  
-Physical path: airborne telemetry → LoRa → ground station AP → phone dashboard.
+```
+Flying Breadboard (ESP32)  →  LoRa  →  ground station AP  →  ground.html
+                                                              ↑
+                                         shared protocol v1 ──┘
 
-Live sim: https://thebabeldragon.github.io/neuro-swarm/  
-Ground UI (static / demo): open `ground.html` locally or from the ground AP.
+Browser lab (index.html) remains for neuroevolution experiments and
+simulator → telemetry adapter work. It is not the product surface.
+```
+
+Live lab (GitHub Pages): https://thebabeldragon.github.io/neuro-swarm/  
+Ground UI: `ground.html` (demo mode works with no hardware)
+
+## What works now
+
+| Layer | Status |
+|-------|--------|
+| Telemetry protocol v1 (44-byte binary + CRC) | Host-tested |
+| Phone ground dashboard + multi-aircraft store | Static + demo stream |
+| Airborne / ground firmware boundaries | Sketched, radio stubbed |
+| LoRa chipset adapter | Stub until module + region chosen |
+| Evolution lab (old sim) | Intact, secondary entry |
+| Remote motor control / autonomous flight | **Out of scope** |
 
 ## Run locally
 
@@ -18,45 +33,40 @@ Ground UI (static / demo): open `ground.html` locally or from the ground AP.
 python3 -m http.server 8080
 ```
 
-Then open:
+- http://localhost:8080/ground.html — **primary UI** (tap **Demo**)
+- http://localhost:8080/ — evolution lab (optional)
 
-- http://localhost:8080 — simulation
-- http://localhost:8080/ground.html — telemetry dashboard (use **Demo**)
-
-## Controls (simulation)
-
-Desktop
-- **WASD / arrows** — move
-- **Space / Shift** — boost
-- **F / J / Ctrl** — fire
-- **R** — force new generation
-
-Touch
-- **Left side drag** — virtual stick
-- **FIRE** / **BOOST** / **GEN**
-
-## Dual-domain layout
-
-```
-index.html / style.css / js/{net,ga,flock,audio,input,world,main}.js   # digital swarm
-ground.html / ground.css / js/telemetry/* / js/ground/*               # physical dashboard
-firmware/{common,airborne,ground-station,platform}/                   # ESP32 targets
-hardware/                                                             # Flying Breadboard notes
-docs/                                                                 # architecture & safety
-tests/                                                                # host protocol tests
-```
-
-## Host tests
+Host protocol tests:
 
 ```bash
 node tests/protocol/telemetry.test.js
 ```
 
-## Branch status
+## Layout
 
-Physical control / autonomous flight are **out of scope**.  
-LoRa chipset adapters are stubs until hardware is selected and documented.  
-See `docs/SAFETY.md` and `docs/ROADMAP.md`.
+```
+ground.html / ground.css / js/telemetry/* / js/ground/*   # ground surface
+firmware/{common,airborne,ground-station,platform}/      # ESP32 targets
+hardware/                                                # Flying Breadboard
+docs/                                                    # architecture & safety
+tests/                                                   # host protocol tests
+index.html / style.css / js/{net,ga,flock,...}.js        # evolution lab
+```
+
+## Safety
+
+No autonomous flight. No browser → motor commands. Propellers off until the staged checks in `docs/SAFETY.md` pass. LoRa stays disabled behind a stub until pins, antenna, and regional limits are documented.
+
+## Docs
+
+- `docs/ARCHITECTURE.md`
+- `docs/TELEMETRY_PROTOCOL.md`
+- `docs/LORA_TRANSPORT.md`
+- `docs/GROUND_STATION.md`
+- `docs/AIRCRAFT_FIRMWARE.md`
+- `docs/HARDWARE_COMPATIBILITY.md`
+- `docs/SAFETY.md`
+- `docs/ROADMAP.md`
 
 ## License
 
