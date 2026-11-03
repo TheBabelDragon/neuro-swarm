@@ -199,25 +199,28 @@ const AppViews = (() => {
     );
   }
 
-  function autonomy(simSnap, simCaps) {
+  function autonomy(simSnap, simCaps, engineStatus) {
     const mode = (simSnap && simSnap.mode) || "DISARMED";
     const reason = (simSnap && simSnap.reason) || "NONE";
     const mission = simSnap && simSnap.mission;
     const pos = simSnap && simSnap.position_ned;
     const caps = (simCaps && simCaps.capabilities) || {};
     const safety = (simCaps && simCaps.safety) || {};
+    const eng = engineStatus || {};
     return (
       '<div class="section-title">Simulation backend only</div>' +
       '<p class="muted" style="font-size:12px;line-height:1.45;margin:0 0 12px">' +
-      "Host-side autonomy foundation. No browser arming, no motor commands, " +
-      "no physical mission transport. hardware_validated remains false." +
+      "Host-side autonomy foundation via safety-gated engine. No browser arming, " +
+      "no motor commands, no physical mission transport." +
       "</p>" +
       block(
         "Flight / autonomy state",
         row("Mode", mode) +
           row("Failsafe reason", reason) +
           row("Backend", (simSnap && simSnap.backend) || "simulation") +
-          row("Hardware validated", safety.hardware_validated ? "yes" : "no")
+          row("Hardware validated", eng.hardware_validated || safety.hardware_validated ? "yes" : "no") +
+          row("Actuators", eng.actuators_enabled ? "ENABLED" : "disabled") +
+          row("Operator ack pending", eng.operator_ack_pending ? "yes" : "no")
       ) +
       block(
         "Mission",
@@ -254,6 +257,10 @@ const AppViews = (() => {
       '<button type="button" class="btn ghost" data-auto="rth">RTH</button>' +
       '<button type="button" class="btn ghost" data-auto="abort">Abort</button>' +
       "</div>" +
+      '<div class="toolbar" style="padding-left:0">' +
+      '<button type="button" class="btn ghost" data-auto="ack">Ack clear</button>' +
+      '<button type="button" class="btn ghost" data-auto="recover">Recover → DISARMED</button>' +
+      "</div>" +
       '<a class="lab-cta" href="lab.html" style="margin-top:16px">Evolution lab' +
       "<span>Neural sandbox — separate from autonomy foundation</span></a>"
     );
@@ -263,21 +270,21 @@ const AppViews = (() => {
     return (
       block(
         "Ground station",
-        row("UI", "app shell + autonomy") +
+        row("UI", "app shell + autonomy engine") +
           row("Mode", (meta.mode || "idle").toUpperCase()) +
           row("AP URL", "http://192.168.4.1/")
       ) +
       block(
         "Protocol",
         row("Telemetry", "v1 · 44 bytes") +
-          row("Capability msg", "v1 · separate JSON") +
+          row("Capability / status", "v1 JSON · separate") +
           row("Autonomy", "software foundation")
       ) +
       block(
         "Safety",
         row("Remote motors", "disabled") +
           row("Physical auto", "not enabled") +
-          row("Supervisor", "host sim + contracts")
+          row("Supervisor", "engine-gated")
       ) +
       '<a class="lab-cta" href="lab.html">Open evolution lab<span>Optional sandbox</span></a>'
     );
