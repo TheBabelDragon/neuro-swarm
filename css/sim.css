@@ -1,0 +1,101 @@
+/* Autonomy simulator workspace */
+.sim-workspace {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+@media (min-width: 960px) {
+  .sim-workspace {
+    grid-template-columns: 1.4fr 1fr;
+    min-height: 62vh;
+  }
+}
+.sim-map-pane {
+  position: relative;
+  min-height: 280px;
+  height: 42vh;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1px solid rgba(125, 255, 178, 0.12);
+  background: #0a1014;
+}
+@media (min-width: 960px) {
+  .sim-map-pane { height: auto; min-height: 520px; }
+}
+.sim-map-pane .maplibregl-map { position: absolute; inset: 0; }
+.ns-map-attr {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  z-index: 2;
+  font-size: 10px;
+  color: #7f9a8e;
+  background: rgba(5, 7, 10, 0.75);
+  padding: 4px 8px;
+  border-radius: 4px;
+}
+.sim-side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 70vh;
+  overflow: auto;
+}
+.sim-panel {
+  background: var(--panel, #0c1014);
+  border: 1px solid rgba(125, 255, 178, 0.1);
+  border-radius: 12px;
+  padding: 10px 12px;
+}
+.sim-panel h3 {
+  margin: 0 0 8px;
+  font-family: var(--mono);
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-dim, #7f9a8e);
+  font-weight: 500;
+}
+.sim-badge {
+  display: inline-block;
+  font-family: var(--mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  color: var(--amber, #ffb454);
+  border: 1px solid rgba(255, 180, 84, 0.35);
+  border-radius: 4px;
+  padding: 2px 6px;
+  margin-bottom: 8px;
+}
+.sim-timeline {
+  max-height: 160px;
+  overflow: auto;
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--text-dim, #7f9a8e);
+}
+.sim-timeline div { padding: 2px 0; border-bottom: 1px solid rgba(127, 154, 142, 0.12); }
+.sim-field {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+  align-items: center;
+}
+.sim-field input, .sim-field select {
+  background: #10161c;
+  border: 1px solid rgba(126, 231, 255, 0.25);
+  color: var(--text, #d8e6de);
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-family: var(--mono);
+  font-size: 12px;
+  width: 100px;
+}
+.sim-field label {
+  font-size: 10px;
+  color: var(--text-dim, #7f9a8e);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  width: 100%;
+}

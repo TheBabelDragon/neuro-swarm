@@ -1,4 +1,4 @@
-/** Neuro-Swarm primary application controller + gated sim autonomy. */
+/** Neuro-Swarm primary application controller. */
 (() => {
   const store = AircraftStore.create();
   const root = document.getElementById("view-root");
@@ -11,13 +11,7 @@
   let demoTimer = null;
   let demoSeq = 0;
   let route = { view: "overview", aircraftId: null };
-  let simSnap = null;
-
-  const sim = AutonomySimBackend.create({
-    aircraft_id: "SIM-APP-1",
-    speed_m_s: 3,
-  });
-  const engine = AutonomyEngine.create(sim);
+  let autonomyMounted = false;
 
   function meta() {
     return { mode, connText };
@@ -40,15 +34,25 @@
       el.classList.toggle("active", el.getAttribute("data-view") === v);
     });
 
+    if (v === "autonomy") {
+      if (!autonomyMounted) {
+        autonomyMounted = true;
+        SimView.mount(root);
+      }
+      return;
+    }
+
+    if (autonomyMounted) {
+      SimView.unmount();
+      autonomyMounted = false;
+    }
+
     let html = "";
     if (v === "overview") html = AppViews.overview(store, meta());
     else if (v === "fleet") html = AppViews.fleet(store);
     else if (v === "aircraft") html = AppViews.aircraftDetail(store, route.aircraftId);
     else if (v === "radio") html = AppViews.radio(store, meta());
-    else if (v === "autonomy") {
-      const st = engine.status();
-      html = AppViews.autonomy(simSnap || st.snapshot, sim.capabilities(), st);
-    } else if (v === "system") html = AppViews.system(meta());
+    else if (v === "system") html = AppViews.system(meta());
     else html = AppViews.overview(store, meta());
 
     root.innerHTML = html;
@@ -178,34 +182,7 @@
       return;
     }
     const nav = e.target.closest("[data-nav]");
-    if (nav) {
-      AppRouter.go(nav.getAttribute("data-nav"));
-      return;
-    }
-    const auto = e.target.closest("[data-auto]");
-    if (auto) {
-      const cmd = auto.getAttribute("data-auto");
-      if (cmd === "arm") sim.armPreflight();
-      if (cmd === "mission") {
-        engine.gatedLoadMission({
-          waypoints: [
-            { north_m: 0, east_m: 0, down_m: -5, acceptance_radius_m: 1.5 },
-            { north_m: 8, east_m: 0, down_m: -5, acceptance_radius_m: 1.5 },
-            { north_m: 8, east_m: 6, down_m: -4, acceptance_radius_m: 1.5 },
-          ],
-          home_ned: { north_m: 0, east_m: 0, down_m: 0 },
-        });
-      }
-      if (cmd === "start") engine.gatedStartAutonomous();
-      if (cmd === "pause") sim.pauseMission();
-      if (cmd === "resume") sim.resumeMission();
-      if (cmd === "rth") sim.requestReturnHome();
-      if (cmd === "abort") sim.abortMission();
-      if (cmd === "ack") engine.acknowledgeClear();
-      if (cmd === "recover") engine.attemptRecovery(AutonomyTypes.FlightMode.DISARMED);
-      simSnap = engine.step(0);
-      render();
-    }
+    if (nav) AppRouter.go(nav.getAttribute("data-nav"));
   });
 
   AppRouter.onChange((r) => {
@@ -214,10 +191,7 @@
   });
 
   setInterval(() => {
-    if (route.view === "autonomy") {
-      simSnap = engine.step(0.1);
-      render();
-    } else if (
+    if (
       route.view === "overview" ||
       route.view === "fleet" ||
       route.view === "aircraft" ||
@@ -225,9 +199,9 @@
     ) {
       render();
     }
-  }, 200);
+  }, 500);
 
   setMode("idle");
   setConn("—");
-  window.NeuroSwarmApp = { store, startDemo, connectLive, sim, engine };
+  window.NeuroSwarmApp = { store, startDemo, connectLive };
 })();

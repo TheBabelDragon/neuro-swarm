@@ -1,42 +1,42 @@
 # neuro-swarm
 
-**Physical swarm control platform** with an **autonomy foundation** (simulation + contracts).
+Physical swarm **telemetry** platform + **kinematic geographic autonomy simulator** (simulation only).
 
-ESP32 aircraft · LoRa telemetry · ground app · hardware-independent autonomy core.
-
-```
-Telemetry v1 (44 B)  →  ground app destinations
-Autonomy core        →  sim backend (host) · S3 / FC boundaries (stubs)
-Capability message v1 (JSON, separate from telemetry frame)
-```
+Autonomy foundation is on `main`. This branch adds the map-based Autonomy Simulator V2.
 
 ## App destinations
 
-Overview · Fleet · Aircraft · Radio · **Autonomy** · System  
-Evolution lab: `lab.html`
+Overview · Fleet · Aircraft · Radio · **Autonomy** (map simulator) · System  
+Lab: `lab.html`
 
-Autonomy view runs a **simulation-only** state machine. No remote arming, no motor commands.
+### Autonomy simulator
 
-## Branches
+- MapLibre GL JS **6.16.0** + OpenFreeMap liberty style (OSM-derived)  
+- Local grid fallback if tiles/scripts fail  
+- Geographic missions → NED kinematic sim  
+- Scenarios, event timeline, safety supervisor  
+- **No** actuators, arming, or physical flight  
 
-- `feat/physical-swarm-lora` — telemetry + app shell  
-- `feat/autonomous-flight-foundation` — this autonomy work (not merged to main)
+Attribution: © OpenFreeMap © OpenStreetMap contributors.
 
-## Run
+## Tests
 
 ```bash
-python3 -m http.server 8080
-# http://localhost:8080/  → app (Demo + Autonomy)
-
-node tests/protocol/telemetry.test.js
-node tests/autonomy/autonomy.test.js
+node tests/run_all.js
 ```
+
+CI: `.github/workflows/host-tests.yml`
 
 ## Safety
 
-Physical autonomous actuators: **not enabled**.  
-`hardware_validated`: **false**.  
-See `docs/FLIGHT_SAFETY.md`, `docs/AUTONOMY_VALIDATION.md`.
+`hardware_validated = false` · `actuators_enabled = false`  
+Recovery never manufactures healthy sensors.
+
+## Docs
+
+- `docs/AUTONOMY_SIMULATOR.md`  
+- `docs/AUTONOMY_ARCHITECTURE.md`  
+- `docs/FLIGHT_SAFETY.md`  
 
 ## License
 
