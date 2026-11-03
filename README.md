@@ -1,21 +1,41 @@
 # neuro-swarm
 
-Physical swarm **telemetry** platform + **kinematic geographic autonomy simulator** (simulation only).
+Physical swarm **telemetry** platform and **kinematic geographic autonomy simulator** (simulation only).
 
-Autonomy foundation is on `main`. This branch adds the map-based Autonomy Simulator V2.
+Browser-first: static app on GitHub Pages. No install. Evolution lab is an optional sandbox, not the product identity.
 
-## App destinations
+## Open in the browser
 
-Overview · Fleet · Aircraft · Radio · **Autonomy** (map simulator) · System  
-Lab: `lab.html`
+| Destination | URL |
+|-------------|-----|
+| **Swarm app** (Overview · Fleet · Aircraft · Radio · Autonomy · System) | [https://thebabeldragon.github.io/neuro-swarm/](https://thebabeldragon.github.io/neuro-swarm/) |
+| **Evolution lab** (optional neural sandbox) | [https://thebabeldragon.github.io/neuro-swarm/lab.html](https://thebabeldragon.github.io/neuro-swarm/lab.html) |
 
-### Autonomy simulator
+Locally:
 
-- MapLibre GL JS **6.16.0** + OpenFreeMap liberty style (OSM-derived)  
-- Local grid fallback if tiles/scripts fail  
-- Geographic missions → NED kinematic sim  
-- Scenarios, event timeline, safety supervisor  
-- **No** actuators, arming, or physical flight  
+```bash
+python3 -m http.server 8080
+# http://localhost:8080/
+# http://localhost:8080/lab.html
+```
+
+On a ground-station SoftAP (when configured): typically `http://192.168.4.1/`
+
+## What it is
+
+- **Telemetry ground UI** — multi-aircraft store, demo stream, live WebSocket path
+- **Autonomy map console** — MapLibre + OpenFreeMap, geographic missions, kinematic sim, scenarios
+- **Evolution lab** — separate page for neural/genetic experiments
+
+It is **not** a combat game and does not enable physical flight or motor control from the browser.
+
+## Autonomy simulator
+
+- MapLibre GL JS **6.16.0** + OpenFreeMap liberty (OSM-derived)
+- Local grid fallback if map resources fail
+- Geographic missions → NED kinematic simulation
+- Scenarios, event timeline, safety supervisor
+- **No** actuators, arming, or physical flight
 
 Attribution: © OpenFreeMap © OpenStreetMap contributors.
 
@@ -34,9 +54,9 @@ Recovery never manufactures healthy sensors.
 
 ## Docs
 
-- `docs/AUTONOMY_SIMULATOR.md`  
-- `docs/AUTONOMY_ARCHITECTURE.md`  
-- `docs/FLIGHT_SAFETY.md`  
+- `docs/AUTONOMY_SIMULATOR.md`
+- `docs/AUTONOMY_ARCHITECTURE.md`
+- `docs/FLIGHT_SAFETY.md`
 
 ## License
 
