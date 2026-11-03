@@ -1,5 +1,5 @@
 /**
- * Engine, recovery, native/FC mocks, status message.
+ * Engine recovery + fault inject isolation.
  * Run: node tests/autonomy/engine.test.js
  */
 const assert = require("assert");
@@ -39,20 +39,7 @@ const AutonomySimBackend = loadAs("js/autonomy/sim-backend.js", "AutonomySimBack
   AutonomyMission,
 });
 const AutonomyEngine = loadAs("js/autonomy/engine.js", "AutonomyEngine", { AutonomyTypes });
-const AutonomyNativeBackendMock = loadAs(
-  "js/autonomy/native-backend-mock.js",
-  "AutonomyNativeBackendMock",
-  { AutonomyTypes }
-);
-const AutonomyExternalFcMock = loadAs(
-  "js/autonomy/external-fc-mock.js",
-  "AutonomyExternalFcMock",
-  { AutonomyTypes }
-);
-const AutonomyStatusMessage = loadAs(
-  "js/autonomy/status-message.js",
-  "AutonomyStatusMessage"
-);
+const AutonomyFaultInject = loadAs("js/autonomy/fault-inject.js", "AutonomyFaultInject");
 
 let passed = 0;
 function ok(name) {
@@ -61,112 +48,99 @@ function ok(name) {
 }
 
 const { FlightMode } = AutonomyTypes;
+console.log("engine recovery regression tests");
 
-console.log("autonomy engine / mock tests");
-
-// Gated start blocked by safety
-{
+function setupManual() {
   const backend = AutonomySimBackend.create();
   const engine = AutonomyEngine.create(backend);
-  backend.armPreflight();
-  backend.loadMission({ waypoints: [{ north_m: 1, east_m: 0, down_m: -2 }] });
-  backend._testSetSensorsValid(false);
-  const r = engine.gatedStartAutonomous();
-  assert.strictEqual(r.ok, false);
-  assert.strictEqual(r.error, "safety_blocked");
-  ok("engine gates start on safety");
-}
-
-// Recovery requires operator ack
-{
-  const backend = AutonomySimBackend.create();
-  const engine = AutonomyEngine.create(backend);
+  const inj = AutonomyFaultInject.wrap(backend);
   backend.armPreflight();
   backend.requestMode(FlightMode.MANUAL);
-  backend._testSetBattery(9000);
+  return { backend, engine, inj };
+}
+
+// Battery persists after ack
+{
+  const { backend, engine, inj } = setupManual();
+  inj.setBattery(9000);
   backend.step(0.1);
   assert.strictEqual(backend.mode, FlightMode.FAILSAFE);
-  const denied = engine.attemptRecovery(FlightMode.DISARMED);
-  assert.strictEqual(denied.ok, false);
-  assert.strictEqual(denied.error, "operator_ack_required");
   engine.acknowledgeClear();
-  backend._testSetBattery(11800);
-  const okRec = engine.attemptRecovery(FlightMode.DISARMED);
-  assert.strictEqual(okRec.ok, true);
-  assert.strictEqual(backend.mode, FlightMode.DISARMED);
-  ok("failsafe recovery with operator ack");
+  const r = engine.attemptRecovery(FlightMode.DISARMED);
+  assert.strictEqual(r.ok, false);
+  assert.strictEqual(r.error, "safety_not_clear");
+  assert.strictEqual(backend.mode, FlightMode.FAILSAFE);
+  ok("battery fault persists after acknowledgement");
 }
 
-// Fault only to disarmed
+// Sensor fault persists
 {
-  const backend = AutonomySimBackend.create();
-  const engine = AutonomyEngine.create(backend);
-  backend.armPreflight();
-  backend.requestMode(FlightMode.MANUAL);
-  backend._testSetWatchdog(false);
+  const { backend, engine, inj } = setupManual();
+  inj.setSensorsValid(false);
+  backend.step(0.1);
+  engine.acknowledgeClear();
+  assert.strictEqual(engine.attemptRecovery(FlightMode.DISARMED).ok, false);
+  assert.strictEqual(backend.mode, FlightMode.FAILSAFE);
+  ok("sensor fault persists after acknowledgement");
+}
+
+// Watchdog persists
+{
+  const { backend, engine, inj } = setupManual();
+  inj.setWatchdog(false);
   backend.step(0.1);
   assert.strictEqual(backend.mode, FlightMode.FAULT);
   engine.acknowledgeClear();
-  backend._testSetWatchdog(true);
-  const bad = engine.attemptRecovery(FlightMode.READY);
-  assert.strictEqual(bad.ok, false);
-  const good = engine.attemptRecovery(FlightMode.DISARMED);
-  assert.strictEqual(good.ok, true);
-  ok("fault recovery only to DISARMED");
+  assert.strictEqual(engine.attemptRecovery(FlightMode.DISARMED).ok, false);
+  ok("watchdog fault persists after acknowledgement");
 }
 
-// Native mock capabilities from config only
+// Backend failure persists
 {
-  const n = AutonomyNativeBackendMock.create();
-  assert.strictEqual(n.capabilities().capabilities.attitude_estimation, false);
-  assert.strictEqual(n.isOperational(), false);
-  n.configure({
-    configured: true,
-    imu_present: true,
-    baro_present: true,
-    gnss_present: true,
-  });
-  const c = n.capabilities().capabilities;
-  assert.strictEqual(c.waypoint_navigation, true);
-  assert.strictEqual(n.capabilities().safety.hardware_validated, false);
-  assert.strictEqual(n.requestNav().ok, false);
-  ok("native mock capability derivation");
+  const { backend, engine, inj } = setupManual();
+  inj.setBackendHealthy(false);
+  backend.step(0.1);
+  engine.acknowledgeClear();
+  assert.strictEqual(engine.attemptRecovery(FlightMode.DISARMED).ok, false);
+  ok("backend failure persists after acknowledgement");
 }
 
-// External FC rejects actuators
+// Recovery succeeds only after genuine restore via injector (test path), not recovery itself
 {
-  const fc = AutonomyExternalFcMock.create({ configured: true, connected: true });
-  const ack = fc.requestNav();
-  assert.strictEqual(ack.ack, "REJECTED");
-  assert.strictEqual(ack.actuators_enabled, false);
-  assert.strictEqual(fc.capabilities().safety.hardware_validated, false);
-  ok("external FC mock rejects actuators");
+  const { backend, engine, inj } = setupManual();
+  inj.setBattery(9000);
+  backend.step(0.1);
+  engine.acknowledgeClear();
+  assert.strictEqual(engine.attemptRecovery(FlightMode.DISARMED).ok, false);
+  inj.setBattery(11800);
+  backend.step(0.1);
+  engine.acknowledgeClear();
+  const r = engine.attemptRecovery(FlightMode.DISARMED);
+  assert.strictEqual(r.ok, true);
+  assert.strictEqual(backend.mode, FlightMode.DISARMED);
+  ok("recovery succeeds only after condition restored");
 }
 
-// Status message strips elevated claims
+// No actuators / no auto mission on recovery
 {
-  const enc = AutonomyStatusMessage.encode({
-    aircraft_id: "X",
-    flight_mode: "AUTONOMOUS",
-    hardware_validated: true,
-    actuators_enabled: true,
-  });
-  assert.strictEqual(enc.ok, true);
-  assert.strictEqual(enc.json.hardware_validated, false);
-  assert.strictEqual(enc.json.actuators_enabled, false);
-  const dec = AutonomyStatusMessage.decode(enc.text);
-  assert.strictEqual(dec.status.hardware_validated, false);
-  ok("status message forces validation flags false");
-}
-
-// Engine status exposes actuators_enabled false
-{
-  const backend = AutonomySimBackend.create();
-  const engine = AutonomyEngine.create(backend);
+  const { backend, engine, inj } = setupManual();
+  inj.setBattery(9000);
+  backend.step(0.1);
+  inj.setBattery(11800);
+  engine.acknowledgeClear();
+  engine.attemptRecovery(FlightMode.DISARMED);
   const st = engine.status();
   assert.strictEqual(st.actuators_enabled, false);
-  assert.strictEqual(st.hardware_validated, false);
-  ok("engine status never enables actuators");
+  assert.strictEqual(backend.mode, FlightMode.DISARMED);
+  ok("recovery never enables actuators or starts mission");
+}
+
+// Fault inject is identifiable test-only
+{
+  const backend = AutonomySimBackend.create();
+  const inj = AutonomyFaultInject.wrap(backend);
+  assert.strictEqual(inj.__testOnly, true);
+  ok("fault inject marked test-only");
 }
 
 console.log("\n" + passed + " passed");

@@ -1,5 +1,4 @@
 #!/usr/bin/env node
-/** Run all host test suites. */
 const { spawnSync } = require("child_process");
 const path = require("path");
 
@@ -7,6 +6,8 @@ const suites = [
   "tests/protocol/telemetry.test.js",
   "tests/autonomy/autonomy.test.js",
   "tests/autonomy/engine.test.js",
+  "tests/geo/geo.test.js",
+  "tests/sim/console.test.js",
 ];
 
 let failed = 0;

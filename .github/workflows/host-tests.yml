@@ -1,0 +1,21 @@
+name: Host tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - feat/autonomy-simulator-v2
+      - feat/physical-swarm-lora
+      - feat/autonomous-flight-foundation
+
+jobs:
+  host:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Run host suites
+        run: node tests/run_all.js
